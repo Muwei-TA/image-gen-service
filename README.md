@@ -1,17 +1,160 @@
 # Image Gen Service
 
-Image Gen Service is a web tool for batch image generation through Codex CLI. Users can enter prompts, upload and reuse reference images, choose aspect ratio and count, watch queued jobs, cancel running work, and reuse generated images as references.
+Image Gen Service is a browser-based batch image generation workspace powered by Codex CLI. It lets you enter prompts, choose aspect ratios and image counts, upload reference images, watch multiple jobs run in parallel, cancel stuck jobs, and download generated results.
 
-The service runs one PTY-backed Codex job per prompt. Runtime paths are configured through environment variables; the project should not depend on a developer-specific host path.
+The app is designed to run as a Docker service. Your Codex login, prompts, uploads, logs, and generated images stay in mounted runtime folders, not in the published image.
 
-## Docker Quick Start
+## What You Get
 
-Do not publish an image created with `docker commit` from a running development container. That can include Codex credentials, prompts, uploaded references, logs, and generated images. Build release images with `Dockerfile.release` or `scripts/build_release_image.sh`.
+- Web UI for prompt-based image generation.
+- Batch generation with one Codex worker per image.
+- Aspect ratio and count controls.
+- Reference image upload and reuse.
+- Generated image reuse as future references.
+- Job queue with running, completed, failed, and canceled states.
+- Batch zip download.
+- Optional API token protection.
+- Docker image that does not include Codex credentials or user history.
 
-Run the published image:
+## Quick Start
+
+Create runtime folders:
 
 ```bash
 mkdir -p runtime/data runtime/workspace runtime/codex-home
+```
+
+Start the service:
+
+```bash
+docker run -d \
+  --name image-gen-service \
+  -p 8088:8088 \
+  -e IMAGE_GEN_API_TOKEN="change-me" \
+  -v "$PWD/runtime/data:/data/image-gen-service" \
+  -v "$PWD/runtime/workspace:/workspace" \
+  -v "$PWD/runtime/codex-home:/data/codex-home" \
+  muwei517/image-gen-service:latest
+```
+
+Log in to Codex inside the container:
+
+```bash
+docker exec -it --user imagegen image-gen-service codex
+```
+
+Open:
+
+```text
+http://localhost:8088
+```
+
+If you set `IMAGE_GEN_API_TOKEN`, the web UI will ask for the token. Enter the same value, for example `change-me`.
+
+## Docker Compose
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  image-gen-service:
+    image: muwei517/image-gen-service:latest
+    container_name: image-gen-service
+    ports:
+      - "8088:8088"
+    environment:
+      IMAGE_GEN_API_TOKEN: "change-me"
+      IMAGE_GEN_MAX_CONCURRENCY: "2"
+    volumes:
+      - ./runtime/data:/data/image-gen-service
+      - ./runtime/workspace:/workspace
+      - ./runtime/codex-home:/data/codex-home
+    restart: unless-stopped
+```
+
+Run:
+
+```bash
+mkdir -p runtime/data runtime/workspace runtime/codex-home
+docker compose up -d
+docker exec -it --user imagegen image-gen-service codex
+```
+
+## Using The App
+
+1. Open the web UI.
+2. Enter the API token if prompted.
+3. Confirm the Codex status banner is clear. If it says Codex is not logged in, run the login command above.
+4. Enter a prompt.
+5. Choose an aspect ratio and count.
+6. Optionally upload or select reference images.
+7. Submit the batch.
+8. Watch each image job complete independently.
+9. Reuse generated images as references or download a batch zip.
+
+Prompts can include normal image instructions and aspect ratio hints. The UI appends the selected aspect ratio before submitting the job.
+
+## Runtime Folders
+
+These folders should be mounted if you want data to survive container updates:
+
+| Host folder | Container path | Contains |
+| --- | --- | --- |
+| `./runtime/data` | `/data/image-gen-service` | batches, jobs, uploads, archived results, service state |
+| `./runtime/workspace` | `/workspace` | default Codex working directory |
+| `./runtime/codex-home` | `/data/codex-home` | Codex login, settings, generated images |
+
+Back up these folders if the generated work matters to you.
+
+## Configuration
+
+Most users only need these variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `IMAGE_GEN_API_TOKEN` | unset | Optional bearer token. Set this for any shared or remote deployment. |
+| `IMAGE_GEN_MAX_CONCURRENCY` | `2` | Maximum number of Codex jobs running at once. Lower this if your machine or account quota is limited. |
+| `IMAGE_GEN_JOB_TIMEOUT_SECONDS` | `1800` | Maximum job runtime before timeout handling. |
+| `IMAGE_GEN_CORS_ORIGIN` | `*` | CORS origin. Restrict this behind a reverse proxy if needed. |
+| `IMAGE_GEN_PORT` | `8088` | Port used inside the container. Usually leave this unchanged and map host ports with Docker. |
+
+Advanced variables:
+
+| Variable | Default in image | Description |
+| --- | --- | --- |
+| `IMAGE_GEN_DATA_DIR` | `/data/image-gen-service` | Persistent service state. |
+| `IMAGE_GEN_DEFAULT_WORKDIR` | `/workspace` | Workdir passed to Codex jobs when the request omits `workdir`. |
+| `IMAGE_GEN_CODEX_BIN` | `/usr/local/bin/codex` | Codex CLI executable. |
+| `IMAGE_GEN_CODEX_HOME` | `/data/codex-home` | Codex auth/config directory. |
+| `IMAGE_GEN_CODEX_USER_HOME` | `/home/imagegen` | `HOME` used for Codex subprocesses. |
+| `IMAGE_GEN_GENERATED_IMAGES_DIR` | `/data/codex-home/generated_images` | Codex generated image directory. |
+| `IMAGE_GEN_RESULTS_DIR` | `${IMAGE_GEN_DATA_DIR}/results` | Service-managed result archive. |
+| `IMAGE_GEN_FILE_ROOTS` | data, workspace, generated images | Allowed roots for serving image files through `/files`. |
+| `IMAGE_GEN_FRONTEND_DIST_DIR` | `/opt/image-gen-service/frontend/dist` | Built frontend directory. |
+| `IMAGE_GEN_BATCH_PREFIX` | `$imagegen` | Prefix sent to Codex for each image job. |
+
+## API Token
+
+When `IMAGE_GEN_API_TOKEN` is set:
+
+- `GET /health` stays public.
+- All other API routes require `Authorization: Bearer <token>`.
+- Image and download URLs can use `?token=<token>` because browser image tags cannot attach authorization headers.
+
+Example:
+
+```bash
+curl -H "Authorization: Bearer change-me" http://localhost:8088/batches
+```
+
+## Updating
+
+Pull the latest image and restart:
+
+```bash
+docker pull muwei517/image-gen-service:latest
+docker stop image-gen-service
+docker rm image-gen-service
 
 docker run -d \
   --name image-gen-service \
@@ -20,108 +163,103 @@ docker run -d \
   -v "$PWD/runtime/data:/data/image-gen-service" \
   -v "$PWD/runtime/workspace:/workspace" \
   -v "$PWD/runtime/codex-home:/data/codex-home" \
-  image-gen-service:release
+  muwei517/image-gen-service:latest
 ```
 
-Log in to Codex inside the container before submitting jobs:
+Mounted runtime folders keep your data.
+
+## Security
+
+Do not expose this service to the public internet without access control. The service can start Codex jobs and serve image files under configured file roots.
+
+Recommended for remote deployments:
+
+- Set `IMAGE_GEN_API_TOKEN`.
+- Use HTTPS through a trusted reverse proxy.
+- Restrict `IMAGE_GEN_CORS_ORIGIN`.
+- Keep `/data/codex-home` private.
+- Do not publish mounted runtime folders.
+
+The published Docker image is intended to exclude:
+
+- Codex `auth.json`
+- Codex logs, sessions, and history
+- uploaded reference images
+- generated images
+- job logs and previous prompts
+
+## Troubleshooting
+
+### The UI says Codex is not logged in
+
+Run:
 
 ```bash
 docker exec -it --user imagegen image-gen-service codex
 ```
 
-Open `http://localhost:8088`. If `IMAGE_GEN_API_TOKEN` is set, API clients must send:
+Then refresh the web UI.
 
-```http
-Authorization: Bearer change-me
-```
+### The UI says API token is required
 
-## Features
+Use the value you set in `IMAGE_GEN_API_TOKEN`. If you forgot it, inspect your Docker command, compose file, or recreate the container with a new token.
 
-- Prompt input, aspect ratio selection, image count, and reference image library.
-- Batch generation with one independent Codex worker per prompt/image.
-- Upload, select, reuse, and delete reference images.
-- Reuse generated images as references.
-- Persistent backend state for batches, jobs, uploads, logs, and generated paths.
-- Cancel running jobs and release worker/Codex processes.
-- Timeout handling for stuck jobs.
-- Frontend served by the same Python HTTP service.
-- Clean release image build without Codex login state or user task data.
+### Jobs stay queued or run slowly
 
-## Runtime Configuration
-
-All deployment-specific paths should be set through environment variables.
-
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `IMAGE_GEN_HOST` | HTTP bind host | `0.0.0.0` |
-| `IMAGE_GEN_PORT` | HTTP port | `8088` |
-| `IMAGE_GEN_SERVICE_ROOT` | Application root | parent of `app/` |
-| `IMAGE_GEN_DATA_DIR` | Persistent metadata, uploads, logs | `${IMAGE_GEN_SERVICE_ROOT}/data` |
-| `IMAGE_GEN_DEFAULT_WORKDIR` | Workdir passed to Codex jobs when request omits `workdir` | parent of service root |
-| `IMAGE_GEN_CODEX_BIN` | Codex CLI executable | `codex` |
-| `IMAGE_GEN_CODEX_HOME` | Codex config/auth directory | `${HOME}/.codex` |
-| `IMAGE_GEN_CODEX_USER_HOME` | `HOME` used for Codex subprocesses | current user home |
-| `IMAGE_GEN_GENERATED_IMAGES_DIR` | Generated image directory | `${IMAGE_GEN_CODEX_HOME}/generated_images` |
-| `IMAGE_GEN_RESULTS_DIR` | Archived result images managed by this service | `${IMAGE_GEN_DATA_DIR}/results` |
-| `IMAGE_GEN_FRONTEND_DIST_DIR` | Built frontend directory | `${IMAGE_GEN_SERVICE_ROOT}/frontend/dist` |
-| `IMAGE_GEN_FILE_ROOTS` | `os.pathsep` separated roots allowed by `/files` | data dir, default workdir, generated images dir |
-| `IMAGE_GEN_JOB_TIMEOUT_SECONDS` | Max job runtime before timeout handling | `1800` |
-| `IMAGE_GEN_MAX_CONCURRENCY` | Max number of Codex workers running at once | `2` |
-| `IMAGE_GEN_BATCH_PREFIX` | Prompt prefix sent to Codex | `$imagegen` |
-| `IMAGE_GEN_API_TOKEN` | Optional bearer token required for all endpoints except `/health` | unset |
-| `IMAGE_GEN_CORS_ORIGIN` | Value for `Access-Control-Allow-Origin` | `*` |
-
-Frontend build-time variable:
-
-| Variable | Purpose |
-| --- | --- |
-| `VITE_IMAGE_GEN_DEFAULT_WORKDIR` | Optional default `workdir` sent by the frontend. If unset, the backend default is used. |
-
-## Start
+Lower concurrency:
 
 ```bash
-cd "$IMAGE_GEN_SERVICE_ROOT"
-python3 -m app.main
+-e IMAGE_GEN_MAX_CONCURRENCY=1
 ```
 
-Open the host/port configured by `IMAGE_GEN_HOST` and `IMAGE_GEN_PORT`.
+Also check your Codex account limits and network access.
 
-## Security
+### Generated images do not show
 
-The service can start Codex jobs and serve image files under `IMAGE_GEN_FILE_ROOTS`. Do not expose it directly to the public internet without access control. For shared or remote deployments, set `IMAGE_GEN_API_TOKEN`, restrict `IMAGE_GEN_CORS_ORIGIN`, and put the service behind a trusted reverse proxy with TLS.
-
-Release images should not contain Codex authentication files or user task data. Keep these paths mounted as runtime volumes instead:
+Make sure the generated image path is under one of the allowed roots in `IMAGE_GEN_FILE_ROOTS`. The default Docker image allows:
 
 ```text
-${IMAGE_GEN_DATA_DIR}
-${IMAGE_GEN_DEFAULT_WORKDIR}
-${IMAGE_GEN_CODEX_HOME}
+/data/image-gen-service
+/workspace
+/data/codex-home/generated_images
 ```
 
-## Build Frontend
+### Container cannot write to mounted folders
+
+The entrypoint tries to fix permissions for mounted folders. If your host filesystem blocks ownership changes, create writable folders manually or use Docker named volumes.
+
+## HTTP API
+
+Common endpoints:
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/health` | Service and Codex status. |
+| `POST` | `/batches` | Submit a batch. |
+| `GET` | `/batches` | List batches. |
+| `GET` | `/batches/{batch_id}` | Batch detail and jobs. |
+| `GET` | `/batches/{batch_id}/download` | Download generated images as zip. |
+| `GET` | `/jobs/{job_id}` | Job detail. |
+| `POST` | `/jobs/{job_id}/cancel` | Cancel a job. |
+| `POST` | `/batches/{batch_id}/cancel` | Cancel queued/running jobs in a batch. |
+| `POST` | `/uploads` | Upload a reference image. |
+| `GET` | `/uploads` | List uploaded reference images. |
+| `DELETE` | `/uploads/{image_id}` | Delete an uploaded reference image. |
+| `GET` | `/files?path=/absolute/image/path.png` | Serve an allowed image file. |
+
+Submit a batch:
 
 ```bash
-cd frontend
-npm ci
-npm run build
+curl -X POST http://localhost:8088/batches \
+  -H "Authorization: Bearer change-me" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A small robot painting a sunset --ar 16:9",
+    "count": 2
+  }'
 ```
 
-The Python server serves `IMAGE_GEN_FRONTEND_DIST_DIR`.
-
-## API
-
-### Health
-
-```http
-GET /health
-```
-
-### Upload Reference Image
-
-```http
-POST /uploads
-Content-Type: application/json
-```
+Upload a reference image:
 
 ```json
 {
@@ -131,140 +269,33 @@ Content-Type: application/json
 }
 ```
 
-### List Uploads
+## Development
 
-```http
-GET /uploads
+Run backend tests:
+
+```bash
+python3 -m unittest discover -s tests
 ```
 
-### Delete Upload
+Build the frontend:
 
-```http
-DELETE /uploads/{image_id}
+```bash
+cd frontend
+npm ci
+npm run build
 ```
 
-This removes both metadata and the file under `IMAGE_GEN_DATA_DIR/uploads/{image_id}`.
+Run the Python service directly:
 
-### Submit Batch
-
-```http
-POST /batches
-Content-Type: application/json
+```bash
+python3 -m app.main
 ```
 
-```json
-{
-  "prompt": "21:9 anime livestream screenshot, clean composition --ar 21:9",
-  "count": 4,
-  "reference_image_ids": ["img_abc123"]
-}
-```
-
-You can pass `workdir` explicitly when needed:
-
-```json
-{
-  "prompts": [
-    "A neon-lit robot fox in a rainy alley --ar 16:9",
-    "A tiny green triangle icon on a plain white background --ar 1:1"
-  ],
-  "workdir": "/path/inside/container",
-  "reference_images": ["/path/inside/container/reference.png"]
-}
-```
-
-Each prompt starts an independent Codex/PTU worker. Generated image paths are returned in each job's `result_paths`.
-
-### List Batches
-
-```http
-GET /batches
-```
-
-### Get Batch Detail
-
-```http
-GET /batches/{batch_id}
-```
-
-### Get Job Detail
-
-```http
-GET /jobs/{job_id}
-```
-
-### Cancel Job
-
-```http
-POST /jobs/{job_id}/cancel
-```
-
-Cancellation marks the job as `canceled`, sets `exit_code` to `130`, and kills the worker/Codex process tree when available.
-
-### Cancel Batch
-
-```http
-POST /batches/{batch_id}/cancel
-```
-
-Cancels all queued/running jobs in that batch.
-
-### Serve Image File
-
-```http
-GET /files?path=/absolute/image/path.png
-```
-
-Only image files under `IMAGE_GEN_FILE_ROOTS` are served.
-
-## Job States
-
-Job statuses:
-
-- `queued`
-- `running`
-- `succeeded`
-- `failed`
-- `canceled`
-
-Batch statuses:
-
-- `queued`
-- `running`
-- `completed`
-- `finished_with_errors`
-
-Timeout handling:
-
-- `pty_worker.py` has a total timeout.
-- `manager.py` checks running jobs during API reads.
-- If a job exceeds `IMAGE_GEN_JOB_TIMEOUT_SECONDS`, it is marked failed unless generated image paths already exist.
-
-## Data Persistence
-
-The current persistence layer is file-based:
-
-```text
-${IMAGE_GEN_DATA_DIR}/state.json
-${IMAGE_GEN_DATA_DIR}/jobs/
-${IMAGE_GEN_DATA_DIR}/uploads/
-${IMAGE_GEN_GENERATED_IMAGES_DIR}/
-```
-
-Mount those directories as volumes if you want state to survive container recreation.
-
-Recommended future improvement:
-
-- Move `state.json` to SQLite.
-- Add migrations.
-- Add retention/cleanup policies for logs and generated images.
-- Add backup/restore scripts.
-
-## Clean Docker Release Image
+## Building A Release Image
 
 Use the release build instead of `docker commit`. A direct commit can accidentally include Codex credentials, task logs, uploaded images, and generated outputs.
 
-Build inputs must be provided through environment variables:
+Build inputs:
 
 ```bash
 export CODEX_BIN=/path/to/codex
@@ -273,56 +304,14 @@ export CODEX_RUNTIME=/path/to/codex/runtime
 ./scripts/build_release_image.sh image-gen-service:release
 ```
 
-Optional build args can also be provided as environment variables:
+Optional build arguments can be provided as environment variables:
 
 ```bash
 export APP_HOME=/opt/image-gen-service
 export APP_DATA_DIR=/data/image-gen-service
 export APP_WORKDIR=/workspace
-export CODEX_HOME=/opt/codex-home
+export CODEX_HOME=/data/codex-home
 export CODEX_BIN_PATH=/usr/local/bin/codex
 export CODEX_RUNTIME_DIR=/opt/codex-runtime
 export VITE_IMAGE_GEN_DEFAULT_WORKDIR=/workspace
 ```
-
-Run:
-
-```bash
-docker run -d \
-  --name image-gen-service-release \
-  -p 8088:8088 \
-  -v image-gen-data:/data/image-gen-service \
-  -v image-gen-workspace:/workspace \
-  -v codex-home:/opt/codex-home \
-  image-gen-service:release
-```
-
-After starting a clean image, log in to Codex again inside the container:
-
-```bash
-docker exec -it image-gen-service-release codex
-```
-
-## Docker Compose
-
-`docker-compose.yml` is environment-driven. Set host paths through `.env`:
-
-```env
-HOST_DATA_DIR=./runtime/data
-HOST_WORKDIR=./runtime/workspace
-HOST_CODEX_HOME=./runtime/codex-home
-IMAGE_GEN_PORT=8088
-```
-
-Then run:
-
-```bash
-docker compose up -d --build
-```
-
-## Security Notes
-
-- Do not ship Codex auth files.
-- Do not ship Codex logs, sessions, or history.
-- Do not ship `data/uploads`, `data/jobs`, or generated images when publishing a reusable image.
-- Configure served file roots with `IMAGE_GEN_FILE_ROOTS`.

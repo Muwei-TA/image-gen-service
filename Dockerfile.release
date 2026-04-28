@@ -63,9 +63,11 @@ RUN chmod 755 ${CODEX_BIN_PATH} && \
     mkdir -p ${APP_DATA_DIR}/jobs \
              ${APP_DATA_DIR}/uploads \
              ${APP_WORKDIR} \
-             ${CODEX_HOME}/generated_images && \
+             ${CODEX_HOME}/generated_images \
+             /home/${APP_USER}/.codex && \
     mkdir -p /root/.codex && \
     ln -sfn ${CODEX_HOME}/generated_images /root/.codex/generated_images && \
+    ln -sfn ${CODEX_HOME}/generated_images /home/${APP_USER}/.codex/generated_images && \
     printf '{"batches": {}, "jobs": {}, "uploads": {}}\n' > ${APP_DATA_DIR}/state.json && \
     chown -R ${APP_USER}:${APP_USER} ${APP_HOME} ${APP_DATA_DIR} ${APP_WORKDIR} ${CODEX_HOME} /home/${APP_USER} /root/.codex && \
     chmod +x /usr/local/bin/docker-entrypoint.sh

@@ -8,7 +8,8 @@ mkdir -p \
   "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}/jobs" \
   "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}/uploads" \
   "${IMAGE_GEN_DEFAULT_WORKDIR:-/workspace}" \
-  "${IMAGE_GEN_CODEX_HOME:-/data/codex-home}"
+  "${IMAGE_GEN_CODEX_HOME:-/data/codex-home}" \
+  "${IMAGE_GEN_GENERATED_IMAGES_DIR:-/root/.codex/generated_images}"
 
 if [ ! -f "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}/state.json" ]; then
   printf '{"batches": {}, "jobs": {}, "uploads": {}}\n' > "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}/state.json"
@@ -19,6 +20,7 @@ if [ "$(id -u)" = "0" ]; then
     "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}" \
     "${IMAGE_GEN_DEFAULT_WORKDIR:-/workspace}" \
     "${IMAGE_GEN_CODEX_HOME:-/data/codex-home}" \
+    "${IMAGE_GEN_GENERATED_IMAGES_DIR:-/root/.codex/generated_images}" \
     "${IMAGE_GEN_CODEX_USER_HOME:-/home/imagegen}"
   exec gosu "${APP_USER}:${APP_GROUP}" "$@"
 fi

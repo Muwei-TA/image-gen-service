@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ImageCard } from './components/ImageCard';
 import { Sidebar } from './components/Sidebar';
-import { cancelJob, deleteUpload, getApiToken, getBatch, getBatches, getHealth, getUploads, setApiToken, submitBatch, uploadImage } from './lib/api';
+import { cancelJob, deleteUpload, getBatch, getBatches, getHealth, getUploads, submitBatch, uploadImage } from './lib/api';
 import type { Batch, HealthStatus } from './lib/api';
 import { generatedToAsset, uploadToAsset, type AssetItem } from './lib/assets';
 
@@ -17,7 +17,6 @@ export default function App() {
   const [error, setError] = useState('');
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [prompt, setPrompt] = useState('');
-  const [apiTokenInput, setApiTokenInput] = useState(() => getApiToken());
   const [hiddenFailedJobIds, setHiddenFailedJobIds] = useState<Set<string>>(() => {
     try {
       return new Set(JSON.parse(window.localStorage.getItem('image-gen-hidden-failed-jobs') || '[]'));
@@ -45,7 +44,7 @@ export default function App() {
         );
     } catch (err) {
       const message = err instanceof Error ? err.message : '工作区读取失败';
-      setError(message === 'unauthorized' ? '需要 API Token 才能读取工作区。' : message);
+      setError(message);
     }
   }, []);
 
@@ -233,11 +232,6 @@ export default function App() {
     }
   }, [assets]);
 
-  const handleSaveApiToken = useCallback(() => {
-    setApiToken(apiTokenInput);
-    loadWorkspace();
-  }, [apiTokenInput, loadWorkspace]);
-
   return (
     <div className="flex h-screen overflow-hidden bg-[#0b1120] text-slate-100">
       <Sidebar
@@ -274,25 +268,6 @@ export default function App() {
             <div className="mb-5 rounded-lg border border-amber-400/30 bg-amber-950/25 px-4 py-3 text-sm text-amber-100">
               Codex {health.codex.available ? '尚未登录' : '不可用'}。生图前请在容器内执行：
               <code className="ml-2 rounded bg-black/35 px-2 py-1 text-amber-50">codex</code>
-            </div>
-          )}
-
-          {health?.auth_required && (
-            <div className="mb-5 flex flex-col gap-3 rounded-lg border border-cyan-400/25 bg-cyan-950/20 px-4 py-3 text-sm text-cyan-50 sm:flex-row sm:items-center">
-              <span className="text-cyan-100">API Token</span>
-              <input
-                className="min-w-0 flex-1 rounded-md border border-cyan-300/20 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-cyan-300"
-                type="password"
-                value={apiTokenInput}
-                onChange={(event) => setApiTokenInput(event.target.value)}
-              />
-              <button
-                className="rounded-md bg-cyan-300 px-4 py-2 font-medium text-slate-950 hover:bg-cyan-200"
-                type="button"
-                onClick={handleSaveApiToken}
-              >
-                保存
-              </button>
             </div>
           )}
 

@@ -1,27 +1,4 @@
 const BASE_URL = '';
-const TOKEN_STORAGE_KEY = 'image-gen-api-token';
-
-export function getApiToken(): string {
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY) || import.meta.env.VITE_IMAGE_GEN_API_TOKEN || '';
-}
-
-export function setApiToken(token: string): void {
-  const value = token.trim();
-  if (value) window.localStorage.setItem(TOKEN_STORAGE_KEY, value);
-  else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-}
-
-function authHeaders(): HeadersInit {
-  const token = getApiToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-function withAuthUrl(path: string): string {
-  const token = getApiToken();
-  if (!token) return `${BASE_URL}${path}`;
-  const separator = path.includes('?') ? '&' : '?';
-  return `${BASE_URL}${path}${separator}token=${encodeURIComponent(token)}`;
-}
 
 export interface BatchRequest {
   prompt?: string;
@@ -65,7 +42,6 @@ export interface UploadRecord {
 
 export interface HealthStatus {
   ok: boolean;
-  auth_required?: boolean;
   codex?: {
     available: boolean;
     authenticated: boolean;
@@ -84,7 +60,7 @@ export async function getHealth(): Promise<HealthStatus> {
 export async function submitBatch(req: BatchRequest): Promise<Batch> {
   const res = await fetch(`${BASE_URL}/batches`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(req),
   });
   if (!res.ok) throw new Error(await readError(res, 'Failed to submit batch'));
@@ -92,13 +68,13 @@ export async function submitBatch(req: BatchRequest): Promise<Batch> {
 }
 
 export async function getBatch(batchId: string): Promise<Batch> {
-  const res = await fetch(`${BASE_URL}/batches/${batchId}`, { headers: authHeaders() });
+  const res = await fetch(`${BASE_URL}/batches/${batchId}`);
   if (!res.ok) throw new Error(await readError(res, 'Failed to fetch batch'));
   return res.json();
 }
 
 export async function getBatches(): Promise<{ batches: Batch[] }> {
-  const res = await fetch(`${BASE_URL}/batches`, { headers: authHeaders() });
+  const res = await fetch(`${BASE_URL}/batches`);
   if (!res.ok) throw new Error(await readError(res, 'Failed to fetch batches'));
   return res.json();
 }
@@ -106,7 +82,6 @@ export async function getBatches(): Promise<{ batches: Batch[] }> {
 export async function cancelJob(jobId: string): Promise<Job> {
   const res = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/cancel`, {
     method: 'POST',
-    headers: authHeaders(),
   });
   if (!res.ok) throw new Error(await readError(res, 'Failed to cancel job'));
   return res.json();
@@ -115,18 +90,17 @@ export async function cancelJob(jobId: string): Promise<Job> {
 export async function cancelBatch(batchId: string): Promise<Batch> {
   const res = await fetch(`${BASE_URL}/batches/${encodeURIComponent(batchId)}/cancel`, {
     method: 'POST',
-    headers: authHeaders(),
   });
   if (!res.ok) throw new Error(await readError(res, 'Failed to cancel batch'));
   return res.json();
 }
 
 export function batchDownloadUrl(batchId: string): string {
-  return withAuthUrl(`/batches/${encodeURIComponent(batchId)}/download`);
+  return `${BASE_URL}/batches/${encodeURIComponent(batchId)}/download`;
 }
 
 export async function getUploads(): Promise<{ uploads: UploadRecord[] }> {
-  const res = await fetch(`${BASE_URL}/uploads`, { headers: authHeaders() });
+  const res = await fetch(`${BASE_URL}/uploads`);
   if (!res.ok) throw new Error(await readError(res, 'Failed to fetch uploads'));
   return res.json();
 }
@@ -135,7 +109,7 @@ export async function uploadImage(file: File): Promise<UploadRecord> {
   const data = await fileToBase64(file);
   const res = await fetch(`${BASE_URL}/uploads`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       filename: file.name,
       mime_type: file.type || 'image/png',
@@ -149,13 +123,12 @@ export async function uploadImage(file: File): Promise<UploadRecord> {
 export async function deleteUpload(imageId: string): Promise<void> {
   const res = await fetch(`${BASE_URL}/uploads/${encodeURIComponent(imageId)}`, {
     method: 'DELETE',
-    headers: authHeaders(),
   });
   if (!res.ok) throw new Error(await readError(res, 'Failed to delete upload'));
 }
 
 export function fileUrl(path: string): string {
-  return withAuthUrl(`/files?path=${encodeURIComponent(path)}`);
+  return `${BASE_URL}/files?path=${encodeURIComponent(path)}`;
 }
 
 function fileToBase64(file: File): Promise<string> {

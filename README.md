@@ -13,7 +13,6 @@ The app is designed to run as a Docker service. Your Codex login, prompts, uploa
 - Generated image reuse as future references.
 - Job queue with running, completed, failed, and canceled states.
 - Batch zip download.
-- Optional API token protection.
 - Docker image that does not include Codex credentials or user history.
 
 ## Quick Start
@@ -21,7 +20,7 @@ The app is designed to run as a Docker service. Your Codex login, prompts, uploa
 Create runtime folders:
 
 ```bash
-mkdir -p runtime/data runtime/workspace runtime/codex-home
+mkdir -p runtime/data runtime/workspace runtime/codex-home runtime/images
 ```
 
 Start the service:
@@ -30,10 +29,10 @@ Start the service:
 docker run -d \
   --name image-gen-service \
   -p 8088:8088 \
-  -e IMAGE_GEN_API_TOKEN="change-me" \
   -v "$PWD/runtime/data:/data/image-gen-service" \
   -v "$PWD/runtime/workspace:/workspace" \
   -v "$PWD/runtime/codex-home:/data/codex-home" \
+  -v "$PWD/runtime/images:/root/.codex/generated_images" \
   muwei517/image-gen-service:latest
 ```
 
@@ -49,8 +48,6 @@ Open:
 http://localhost:8088
 ```
 
-If you set `IMAGE_GEN_API_TOKEN`, the web UI will ask for the token. Enter the same value, for example `change-me`.
-
 ## Docker Compose
 
 Create `docker-compose.yml`:
@@ -63,19 +60,19 @@ services:
     ports:
       - "8088:8088"
     environment:
-      IMAGE_GEN_API_TOKEN: "change-me"
       IMAGE_GEN_MAX_CONCURRENCY: "2"
     volumes:
       - ./runtime/data:/data/image-gen-service
       - ./runtime/workspace:/workspace
       - ./runtime/codex-home:/data/codex-home
+      - ./runtime/images:/root/.codex/generated_images
     restart: unless-stopped
 ```
 
 Run:
 
 ```bash
-mkdir -p runtime/data runtime/workspace runtime/codex-home
+mkdir -p runtime/data runtime/workspace runtime/codex-home runtime/images
 docker compose up -d
 docker exec -it --user imagegen image-gen-service codex
 ```
@@ -83,14 +80,13 @@ docker exec -it --user imagegen image-gen-service codex
 ## Using The App
 
 1. Open the web UI.
-2. Enter the API token if prompted.
-3. Confirm the Codex status banner is clear. If it says Codex is not logged in, run the login command above.
-4. Enter a prompt.
-5. Choose an aspect ratio and count.
-6. Optionally upload or select reference images.
-7. Submit the batch.
-8. Watch each image job complete independently.
-9. Reuse generated images as references or download a batch zip.
+2. Confirm the Codex status banner is clear. If it says Codex is not logged in, run the login command above.
+3. Enter a prompt.
+4. Choose an aspect ratio and count.
+5. Optionally upload or select reference images.
+6. Submit the batch.
+7. Watch each image job complete independently.
+8. Reuse generated images as references or download a batch zip.
 
 Prompts can include normal image instructions and aspect ratio hints. The UI appends the selected aspect ratio before submitting the job.
 
@@ -102,7 +98,8 @@ These folders should be mounted if you want data to survive container updates:
 | --- | --- | --- |
 | `./runtime/data` | `/data/image-gen-service` | batches, jobs, uploads, archived results, service state |
 | `./runtime/workspace` | `/workspace` | default Codex working directory |
-| `./runtime/codex-home` | `/data/codex-home` | Codex login, settings, generated images |
+| `./runtime/codex-home` | `/data/codex-home` | Codex login and settings |
+| `./runtime/images` | `/root/.codex/generated_images` | generated images |
 
 Back up these folders if the generated work matters to you.
 
@@ -112,7 +109,6 @@ Most users only need these variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `IMAGE_GEN_API_TOKEN` | unset | Optional bearer token. Set this for any shared or remote deployment. |
 | `IMAGE_GEN_MAX_CONCURRENCY` | `2` | Maximum number of Codex jobs running at once. Lower this if your machine or account quota is limited. |
 | `IMAGE_GEN_JOB_TIMEOUT_SECONDS` | `1800` | Maximum job runtime before timeout handling. |
 | `IMAGE_GEN_CORS_ORIGIN` | `*` | CORS origin. Restrict this behind a reverse proxy if needed. |
@@ -127,25 +123,11 @@ Advanced variables:
 | `IMAGE_GEN_CODEX_BIN` | `/usr/local/bin/codex` | Codex CLI executable. |
 | `IMAGE_GEN_CODEX_HOME` | `/data/codex-home` | Codex auth/config directory. |
 | `IMAGE_GEN_CODEX_USER_HOME` | `/home/imagegen` | `HOME` used for Codex subprocesses. |
-| `IMAGE_GEN_GENERATED_IMAGES_DIR` | `/data/codex-home/generated_images` | Codex generated image directory. |
+| `IMAGE_GEN_GENERATED_IMAGES_DIR` | `/root/.codex/generated_images` | Codex generated image directory. |
 | `IMAGE_GEN_RESULTS_DIR` | `${IMAGE_GEN_DATA_DIR}/results` | Service-managed result archive. |
 | `IMAGE_GEN_FILE_ROOTS` | data, workspace, generated images | Allowed roots for serving image files through `/files`. |
 | `IMAGE_GEN_FRONTEND_DIST_DIR` | `/opt/image-gen-service/frontend/dist` | Built frontend directory. |
 | `IMAGE_GEN_BATCH_PREFIX` | `$imagegen` | Prefix sent to Codex for each image job. |
-
-## API Token
-
-When `IMAGE_GEN_API_TOKEN` is set:
-
-- `GET /health` stays public.
-- All other API routes require `Authorization: Bearer <token>`.
-- Image and download URLs can use `?token=<token>` because browser image tags cannot attach authorization headers.
-
-Example:
-
-```bash
-curl -H "Authorization: Bearer change-me" http://localhost:8088/batches
-```
 
 ## Updating
 
@@ -159,10 +141,10 @@ docker rm image-gen-service
 docker run -d \
   --name image-gen-service \
   -p 8088:8088 \
-  -e IMAGE_GEN_API_TOKEN="change-me" \
   -v "$PWD/runtime/data:/data/image-gen-service" \
   -v "$PWD/runtime/workspace:/workspace" \
   -v "$PWD/runtime/codex-home:/data/codex-home" \
+  -v "$PWD/runtime/images:/root/.codex/generated_images" \
   muwei517/image-gen-service:latest
 ```
 
@@ -170,11 +152,10 @@ Mounted runtime folders keep your data.
 
 ## Security
 
-Do not expose this service to the public internet without access control. The service can start Codex jobs and serve image files under configured file roots.
+Do not expose this service directly to the public internet. The service can start Codex jobs and serve image files under configured file roots. Put it behind a trusted reverse proxy, VPN, or other access control if remote access is needed.
 
 Recommended for remote deployments:
 
-- Set `IMAGE_GEN_API_TOKEN`.
 - Use HTTPS through a trusted reverse proxy.
 - Restrict `IMAGE_GEN_CORS_ORIGIN`.
 - Keep `/data/codex-home` private.
@@ -200,10 +181,6 @@ docker exec -it --user imagegen image-gen-service codex
 
 Then refresh the web UI.
 
-### The UI says API token is required
-
-Use the value you set in `IMAGE_GEN_API_TOKEN`. If you forgot it, inspect your Docker command, compose file, or recreate the container with a new token.
-
 ### Jobs stay queued or run slowly
 
 Lower concurrency:
@@ -221,7 +198,7 @@ Make sure the generated image path is under one of the allowed roots in `IMAGE_G
 ```text
 /data/image-gen-service
 /workspace
-/data/codex-home/generated_images
+/root/.codex/generated_images
 ```
 
 ### Container cannot write to mounted folders
@@ -251,7 +228,6 @@ Submit a batch:
 
 ```bash
 curl -X POST http://localhost:8088/batches \
-  -H "Authorization: Bearer change-me" \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "A small robot painting a sunset --ar 16:9",

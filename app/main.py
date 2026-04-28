@@ -32,7 +32,7 @@ class Handler(BaseHTTPRequestHandler):
     def end_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", settings.cors_origin)
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
 
     def do_OPTIONS(self) -> None:
@@ -53,28 +53,11 @@ class Handler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length) if length > 0 else b""
         return json.loads(raw.decode("utf-8")) if raw else {}
 
-    def _authorized(self) -> bool:
-        if not settings.api_token:
-            return True
-        expected = f"Bearer {settings.api_token}"
-        if self.headers.get("Authorization", "") == expected:
-            return True
-        values = parse_qs(urlparse(self.path).query).get("token") or []
-        return bool(values and values[0] == settings.api_token)
-
-    def _require_auth(self) -> bool:
-        if self._authorized():
-            return True
-        self._send_json(HTTPStatus.UNAUTHORIZED, {"error": "unauthorized"})
-        return False
-
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         if path == "/health":
-            self._send_json(HTTPStatus.OK, {"ok": True, "auth_required": bool(settings.api_token), "codex": manager.codex_status()})
-            return
-        if not self._require_auth():
+            self._send_json(HTTPStatus.OK, {"ok": True, "codex": manager.codex_status()})
             return
         if path == "/files":
             self._send_file(parsed.query)
@@ -205,8 +188,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path.rstrip("/") or "/"
-        if not self._require_auth():
-            return
         if path.startswith("/jobs/") and path.endswith("/cancel"):
             job_id = path.split("/")[2]
             try:
@@ -254,8 +235,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         path = urlparse(self.path).path.rstrip("/") or "/"
-        if not self._require_auth():
-            return
         if path.startswith("/uploads/"):
             image_id = path.split("/", 2)[2]
             try:

@@ -22,6 +22,7 @@ ARG APP_UID=10001
 ARG APP_GID=10001
 
 ENV PYTHONUNBUFFERED=1 \
+    HOME=/home/${APP_USER} \
     IMAGE_GEN_HOST=0.0.0.0 \
     IMAGE_GEN_PORT=8088 \
     IMAGE_GEN_SERVICE_ROOT=${APP_HOME} \
@@ -30,13 +31,13 @@ ENV PYTHONUNBUFFERED=1 \
     IMAGE_GEN_CODEX_BIN=${CODEX_BIN_PATH} \
     IMAGE_GEN_CODEX_HOME=${CODEX_HOME} \
     IMAGE_GEN_CODEX_USER_HOME=/home/${APP_USER} \
+    CODEX_HOME=${CODEX_HOME} \
     CODEX_RUNTIME_DIR=${CODEX_RUNTIME_DIR} \
-    IMAGE_GEN_GENERATED_IMAGES_DIR=${CODEX_HOME}/generated_images \
+    IMAGE_GEN_GENERATED_IMAGES_DIR=/root/.codex/generated_images \
     IMAGE_GEN_FRONTEND_DIST_DIR=${APP_HOME}/frontend/dist \
-    IMAGE_GEN_FILE_ROOTS=${APP_DATA_DIR}:${APP_WORKDIR}:${CODEX_HOME}/generated_images \
+    IMAGE_GEN_FILE_ROOTS=${APP_DATA_DIR}:${APP_WORKDIR}:/root/.codex/generated_images \
     IMAGE_GEN_JOB_TIMEOUT_SECONDS=1800 \
     IMAGE_GEN_MAX_CONCURRENCY=2 \
-    IMAGE_GEN_API_TOKEN= \
     IMAGE_GEN_CORS_ORIGIN=* \
     APP_USER=${APP_USER} \
     APP_GROUP=${APP_USER}
@@ -57,13 +58,15 @@ COPY --chown=${APP_USER}:${APP_USER} --from=frontend-builder /build/frontend/dis
 COPY release-context/codex-bin/codex ${CODEX_BIN_PATH}
 COPY release-context/codex-runtime ${CODEX_RUNTIME_DIR}
 
-RUN chmod +x ${CODEX_BIN_PATH} && \
+RUN chmod 755 ${CODEX_BIN_PATH} && \
+    chmod -R a+rX ${CODEX_RUNTIME_DIR} && \
     mkdir -p ${APP_DATA_DIR}/jobs \
              ${APP_DATA_DIR}/uploads \
              ${APP_WORKDIR} \
-             ${CODEX_HOME} && \
+             ${CODEX_HOME} \
+             /root/.codex/generated_images && \
     printf '{"batches": {}, "jobs": {}, "uploads": {}}\n' > ${APP_DATA_DIR}/state.json && \
-    chown -R ${APP_USER}:${APP_USER} ${APP_HOME} ${APP_DATA_DIR} ${APP_WORKDIR} ${CODEX_HOME} /home/${APP_USER} && \
+    chown -R ${APP_USER}:${APP_USER} ${APP_HOME} ${APP_DATA_DIR} ${APP_WORKDIR} ${CODEX_HOME} /home/${APP_USER} /root/.codex && \
     chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8088

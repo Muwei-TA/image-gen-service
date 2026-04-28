@@ -20,7 +20,6 @@ class Settings:
     default_workdir: Path
     job_timeout_seconds: int
     max_concurrency: int
-    api_token: str
     cors_origin: str
     frontend_dist_dir: Path
     file_roots: tuple[Path, ...]
@@ -55,7 +54,6 @@ class Settings:
             default_workdir=default_workdir,
             job_timeout_seconds=int(os.environ.get("IMAGE_GEN_JOB_TIMEOUT_SECONDS", "1800")),
             max_concurrency=max(1, int(os.environ.get("IMAGE_GEN_MAX_CONCURRENCY", "2"))),
-            api_token=os.environ.get("IMAGE_GEN_API_TOKEN", "").strip(),
             cors_origin=os.environ.get("IMAGE_GEN_CORS_ORIGIN", "*").strip() or "*",
             frontend_dist_dir=Path(os.environ.get("IMAGE_GEN_FRONTEND_DIST_DIR", str(root / "frontend" / "dist"))),
             file_roots=file_roots,

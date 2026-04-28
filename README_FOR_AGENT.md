@@ -12,9 +12,9 @@ Deploy a working Image Gen Service instance:
 - Web port: `8088` by default
 - Runtime data persisted under a user-chosen directory
 - Codex login stored in a mounted `codex-home` directory
-- Optional API token enabled for non-local use
+- Generated images stored in a mounted `images` directory at `/root/.codex/generated_images`
 - Health endpoint verified
-- User given the final URL and login/token instructions
+- User given the final URL and Codex login instructions
 
 ## Safety Rules
 
@@ -22,10 +22,9 @@ Follow these rules before running commands:
 
 - Do not use `docker commit` to publish or preserve this app.
 - Do not copy a user's existing `/root/.codex`, `.codex`, generated images, uploads, logs, or `data/` into a public image.
-- Do not print API tokens, DockerHub tokens, GitHub tokens, or Codex auth files.
+- Do not print DockerHub tokens, GitHub tokens, or Codex auth files.
 - Prefer mounted runtime folders over data stored inside the container.
-- If deploying on a public or shared network, set `IMAGE_GEN_API_TOKEN`.
-- If a token is provided by the user, tell them to revoke or rotate it after use if it was exposed in chat or logs.
+- Do not expose this service directly to the public internet. Use a trusted reverse proxy, VPN, or external access control for remote use.
 
 ## Inputs To Collect
 
@@ -35,11 +34,8 @@ Ask or infer these values:
 | --- | --- | --- |
 | Deploy directory | `./image-gen-service` | Host folder that will contain runtime data. |
 | Host port | `8088` | Change if occupied. |
-| API token | generated or user-provided | Required for remote/shared access. |
 | Max concurrency | `2` | Use `1` on low-resource machines or quota-limited accounts. |
 | Docker Compose available | auto-detect | Prefer compose when available. |
-
-If the user does not provide an API token and the service is not strictly local, generate a random one and show it once.
 
 ## Preflight Checks
 
@@ -71,7 +67,8 @@ Create runtime folders:
 ```bash
 mkdir -p image-gen-service/runtime/data \
          image-gen-service/runtime/workspace \
-         image-gen-service/runtime/codex-home
+         image-gen-service/runtime/codex-home \
+         image-gen-service/runtime/images
 ```
 
 Create `image-gen-service/docker-compose.yml`:
@@ -84,13 +81,13 @@ services:
     ports:
       - "${IMAGE_GEN_HOST_PORT:-8088}:8088"
     environment:
-      IMAGE_GEN_API_TOKEN: "${IMAGE_GEN_API_TOKEN:-change-me}"
       IMAGE_GEN_MAX_CONCURRENCY: "${IMAGE_GEN_MAX_CONCURRENCY:-2}"
       IMAGE_GEN_CORS_ORIGIN: "${IMAGE_GEN_CORS_ORIGIN:-*}"
     volumes:
       - ./runtime/data:/data/image-gen-service
       - ./runtime/workspace:/workspace
       - ./runtime/codex-home:/data/codex-home
+      - ./runtime/images:/root/.codex/generated_images
     restart: unless-stopped
 ```
 
@@ -98,7 +95,6 @@ Create `image-gen-service/.env`:
 
 ```env
 IMAGE_GEN_HOST_PORT=8088
-IMAGE_GEN_API_TOKEN=change-me
 IMAGE_GEN_MAX_CONCURRENCY=2
 IMAGE_GEN_CORS_ORIGIN=*
 ```
@@ -117,16 +113,17 @@ Use this when Docker Compose is unavailable:
 ```bash
 mkdir -p image-gen-service/runtime/data \
          image-gen-service/runtime/workspace \
-         image-gen-service/runtime/codex-home
+         image-gen-service/runtime/codex-home \
+         image-gen-service/runtime/images
 
 docker run -d \
   --name image-gen-service \
   -p 8088:8088 \
-  -e IMAGE_GEN_API_TOKEN="change-me" \
   -e IMAGE_GEN_MAX_CONCURRENCY="2" \
   -v "$PWD/image-gen-service/runtime/data:/data/image-gen-service" \
   -v "$PWD/image-gen-service/runtime/workspace:/workspace" \
   -v "$PWD/image-gen-service/runtime/codex-home:/data/codex-home" \
+  -v "$PWD/image-gen-service/runtime/images:/root/.codex/generated_images" \
   muwei517/image-gen-service:latest
 ```
 
@@ -161,7 +158,6 @@ Expected healthy shape:
 ```json
 {
   "ok": true,
-  "auth_required": true,
   "codex": {
     "available": true,
     "authenticated": true,
@@ -173,21 +169,19 @@ Expected healthy shape:
 
 Before Codex login, `authenticated` can be `false`. That means Docker deployment is working but Codex login is still needed.
 
-Check API token protection:
+Check API access:
 
 ```bash
 curl -i http://127.0.0.1:8088/batches
-curl -i -H "Authorization: Bearer change-me" http://127.0.0.1:8088/batches
 ```
 
-The first request should be `401` when a token is configured. The second should be `200`.
+The request should return `200`.
 
 ## Final Response To User
 
 Provide:
 
 - URL: `http://<host>:<port>`
-- API token location or value if the user asked you to generate it
 - Codex login command
 - Runtime directory path
 - Basic management commands:
@@ -228,6 +222,7 @@ Back up:
 image-gen-service/runtime/data
 image-gen-service/runtime/workspace
 image-gen-service/runtime/codex-home
+image-gen-service/runtime/images
 ```
 
 The most sensitive folder is:
@@ -300,7 +295,7 @@ Ensure generated image paths are under allowed roots:
 ```text
 /data/image-gen-service
 /workspace
-/data/codex-home/generated_images
+/root/.codex/generated_images
 ```
 
 If custom roots are needed, set `IMAGE_GEN_FILE_ROOTS` with colon-separated paths.
@@ -316,4 +311,3 @@ export CODEX_RUNTIME=/path/to/codex/runtime
 ```
 
 Do not publish images made from a running user container.
-

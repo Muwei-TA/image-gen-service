@@ -1,15 +1,20 @@
 # Image Gen Service
 
+[中文文档](README.zh-CN.md) | [Agent deployment guide](README_FOR_AGENT.md)
+
 Image Gen Service is a browser-based batch image generation workspace powered by Codex CLI. It lets you enter prompts, choose aspect ratios and image counts, upload reference images, watch multiple jobs run in parallel, cancel stuck jobs, and download generated results.
 
 The app is designed to run as a Docker service. Your Codex login, prompts, uploads, logs, and generated images stay in mounted runtime folders, not in the published image.
+
+The current published image does not require a service API token. If an endpoint returns `unauthorized`, make sure you are not running an old container, an old image, or a reverse proxy that adds its own authentication.
 
 ## What You Get
 
 - Web UI for prompt-based image generation.
 - Batch generation with one Codex worker per image.
-- Aspect ratio and count controls.
+- Aspect ratio and count controls. The UI supports `1-50` images per batch.
 - Reference image upload and reuse.
+- Multiple reference images per batch.
 - Generated image reuse as future references.
 - Job queue with running, completed, failed, and canceled states.
 - Batch zip download.
@@ -90,6 +95,10 @@ docker exec -it --user imagegen image-gen-service codex
 
 Prompts can include normal image instructions and aspect ratio hints. The UI appends the selected aspect ratio before submitting the job.
 
+Reference images can be uploaded in the UI, selected from previous uploads, or reused from generated results. When reference images are selected, each Codex job receives the prompt plus `--image` arguments for the selected images.
+
+The image count is not the same as concurrency. A batch can contain more images than the current concurrency limit. `IMAGE_GEN_MAX_CONCURRENCY` only controls how many Codex jobs run at the same time.
+
 ## Runtime Folders
 
 These folders should be mounted if you want data to survive container updates:
@@ -169,6 +178,8 @@ The published Docker image is intended to exclude:
 - generated images
 - job logs and previous prompts
 
+User runtime data lives in the mounted folders. Do not publish, share, or bake those folders into a public image.
+
 ## Troubleshooting
 
 ### The UI says Codex is not logged in
@@ -190,6 +201,40 @@ Lower concurrency:
 ```
 
 Also check your Codex account limits and network access.
+
+### API returns unauthorized
+
+The current service image does not require an API token. If you see `{"error":"unauthorized"}`, check that:
+
+- the container was recreated from `muwei517/image-gen-service:latest`;
+- the browser is not hitting an old container on the same port;
+- a reverse proxy, gateway, or cached frontend is not adding its own authentication flow.
+
+Useful checks:
+
+```bash
+docker pull muwei517/image-gen-service:latest
+docker inspect image-gen-service --format '{{.Config.Image}}'
+curl -i http://127.0.0.1:8088/health
+```
+
+### Jobs fail with no generated image detected
+
+The service marks a job as successful only after it finds an output image. Check:
+
+```bash
+docker logs --tail 200 image-gen-service
+docker exec image-gen-service codex --version
+curl -fsS http://127.0.0.1:8088/health
+```
+
+Common causes:
+
+- Codex is not logged in inside the mounted `/data/codex-home`.
+- Codex exits without generating an image.
+- The generated image is not written under `/data/codex-home/generated_images`.
+- Mounted folders are not writable by the container.
+- Concurrency is too high for the host or account quota.
 
 ### Generated images do not show
 
@@ -231,9 +276,38 @@ curl -X POST http://localhost:8088/batches \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "A small robot painting a sunset --ar 16:9",
-    "count": 2
+    "count": 4
   }'
 ```
+
+Submit a batch with uploaded reference image IDs:
+
+```bash
+curl -X POST http://localhost:8088/batches \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Create a cinematic product image --ar 16:9",
+    "count": 4,
+    "reference_image_ids": ["upload_id_1", "upload_id_2"]
+  }'
+```
+
+Submit a batch with existing image paths:
+
+```bash
+curl -X POST http://localhost:8088/batches \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Use the references for composition and color --ar 1:1",
+    "count": 6,
+    "reference_images": [
+      "/data/codex-home/generated_images/reference-1.png",
+      "/data/codex-home/generated_images/reference-2.png"
+    ]
+  }'
+```
+
+`reference_images` paths must be under an allowed `IMAGE_GEN_FILE_ROOTS` directory.
 
 Upload a reference image:
 

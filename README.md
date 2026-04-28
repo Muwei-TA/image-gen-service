@@ -8,6 +8,8 @@ The app is designed to run as a Docker service. Your Codex login, prompts, uploa
 
 The current published image does not require a service API token. If an endpoint returns `unauthorized`, make sure you are not running an old container, an old image, or a reverse proxy that adds its own authentication.
 
+If you want an AI agent or automation tool to deploy this service for you, give it [README_FOR_AGENT.md](README_FOR_AGENT.md). The regular README is focused on end-user deployment and usage of the published Docker image.
+
 ## What You Get
 
 - Web UI for prompt-based image generation.
@@ -317,51 +319,4 @@ Upload a reference image:
   "mime_type": "image/png",
   "data": "base64-image-data"
 }
-```
-
-## Development
-
-Run backend tests:
-
-```bash
-python3 -m unittest discover -s tests
-```
-
-Build the frontend:
-
-```bash
-cd frontend
-npm ci
-npm run build
-```
-
-Run the Python service directly:
-
-```bash
-python3 -m app.main
-```
-
-## Building A Release Image
-
-Use the release build instead of `docker commit`. A direct commit can accidentally include Codex credentials, task logs, uploaded images, and generated outputs.
-
-Build inputs:
-
-```bash
-export CODEX_BIN=/path/to/codex
-export CODEX_RUNTIME=/path/to/codex/runtime
-
-./scripts/build_release_image.sh image-gen-service:release
-```
-
-Optional build arguments can be provided as environment variables:
-
-```bash
-export APP_HOME=/opt/image-gen-service
-export APP_DATA_DIR=/data/image-gen-service
-export APP_WORKDIR=/workspace
-export CODEX_HOME=/data/codex-home
-export CODEX_BIN_PATH=/usr/local/bin/codex
-export CODEX_RUNTIME_DIR=/opt/codex-runtime
-export VITE_IMAGE_GEN_DEFAULT_WORKDIR=/workspace
 ```

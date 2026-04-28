@@ -146,6 +146,49 @@ class ServiceTests(unittest.TestCase):
             }
             self.assertIn(str(image_path), manager._discover_generated_images(job))
 
+    def test_discover_generated_images_splits_candidates_by_job_index(self):
+        with TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            settings = Settings(
+                root=tmp_path,
+                data_dir=tmp_path / "data",
+                codex_bin=Path(sys.executable),
+                codex_home=tmp_path / "codex-home",
+                codex_user_home=tmp_path,
+                terminal_bin="python3",
+                tmux_bin="tmux",
+                host="127.0.0.1",
+                port=0,
+                batch_prefix="$imagegen",
+                default_workdir=tmp_path,
+                job_timeout_seconds=30,
+                max_concurrency=2,
+                cors_origin="*",
+                frontend_dist_dir=tmp_path / "frontend" / "dist",
+                file_roots=(tmp_path / "data", tmp_path, tmp_path / "codex-home" / "generated_images"),
+                generated_images_dir=tmp_path / "codex-home" / "generated_images",
+                results_dir=tmp_path / "data" / "results",
+            )
+            settings.ensure_dirs()
+            generated_dir = settings.generated_images_dir / "batch-output"
+            generated_dir.mkdir(parents=True, exist_ok=True)
+            first = generated_dir / "first.png"
+            second = generated_dir / "second.png"
+            first.write_bytes(b"first")
+            second.write_bytes(b"second")
+            os.utime(first, (100, 100))
+            os.utime(second, (101, 101))
+
+            store = StateStore(settings.data_dir / "state.json")
+            store.create_batch({"batch_id": "batch_1", "job_ids": []})
+            store.create_job({"job_id": "job_1", "batch_id": "batch_1", "index": 0})
+            store.create_job({"job_id": "job_2", "batch_id": "batch_1", "index": 1})
+            manager = JobManager(settings, store)
+
+            common = {"batch_id": "batch_1", "started_at": "1970-01-01T00:00:00+00:00"}
+            self.assertEqual(manager._discover_generated_images({**common, "job_id": "job_1", "index": 0}), [str(first)])
+            self.assertEqual(manager._discover_generated_images({**common, "job_id": "job_2", "index": 1}), [str(second)])
+
     def test_batch_with_multiple_prompts_creates_multiple_jobs(self):
         class FakeProc:
             returncode = 0

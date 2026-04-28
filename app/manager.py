@@ -258,7 +258,7 @@ class JobManager:
         for path in sorted(root.rglob("*")):
             if not path.is_file():
                 continue
-            if path.suffix.lower() not in {".png", "jpg", ".jpeg", ".webp"}:
+            if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
                 continue
             try:
                 stat = path.stat()

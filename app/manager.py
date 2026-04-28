@@ -258,7 +258,7 @@ class JobManager:
         for path in sorted(root.rglob("*")):
             if not path.is_file():
                 continue
-            if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+            if path.suffix.lower() not in {".png", "jpg", ".jpeg", ".webp"}:
                 continue
             try:
                 stat = path.stat()
@@ -272,7 +272,21 @@ class JobManager:
             seen.add(text)
             candidates.append((stat.st_mtime, text))
         candidates.sort(key=lambda item: (item[0], item[1]))
-        return [path for _, path in candidates]
+        paths = [path for _, path in candidates]
+        if "batch_id" not in job or "index" not in job:
+            return paths
+
+        batch_jobs = sorted(
+            self.store.list_jobs_for_batch(str(job["batch_id"])),
+            key=lambda item: int(item.get("index", 0)),
+        )
+        if len(batch_jobs) <= 1:
+            return paths[:1]
+
+        job_index = int(job.get("index", 0))
+        if job_index >= len(paths):
+            return []
+        return [paths[job_index]]
 
     def _parse_iso_timestamp(self, value: Any) -> datetime | None:
         if not value:

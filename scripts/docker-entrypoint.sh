@@ -3,30 +3,44 @@ set -eu
 
 APP_USER="${APP_USER:-imagegen}"
 APP_GROUP="${APP_GROUP:-imagegen}"
+DATA_DIR="${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}"
+WORKDIR_PATH="${IMAGE_GEN_DEFAULT_WORKDIR:-/workspace}"
+CODEX_HOME_PATH="${IMAGE_GEN_CODEX_HOME:-/data/codex-home}"
+GENERATED_IMAGES_DIR="${IMAGE_GEN_GENERATED_IMAGES_DIR:-/data/codex-home/generated_images}"
+CODEX_USER_HOME="${IMAGE_GEN_CODEX_USER_HOME:-/home/imagegen}"
 
 mkdir -p \
-  "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}/jobs" \
-  "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}/uploads" \
-  "${IMAGE_GEN_DEFAULT_WORKDIR:-/workspace}" \
-  "${IMAGE_GEN_CODEX_HOME:-/data/codex-home}" \
-  "${IMAGE_GEN_GENERATED_IMAGES_DIR:-/data/codex-home/generated_images}"
+  "${DATA_DIR}/jobs" \
+  "${DATA_DIR}/uploads" \
+  "${WORKDIR_PATH}" \
+  "${CODEX_HOME_PATH}" \
+  "${GENERATED_IMAGES_DIR}" \
+  "${CODEX_USER_HOME}/.codex"
 
 mkdir -p /root/.codex
 if [ ! -e /root/.codex/generated_images ]; then
-  ln -sfn "${IMAGE_GEN_GENERATED_IMAGES_DIR:-/data/codex-home/generated_images}" /root/.codex/generated_images
+  ln -sfn "${GENERATED_IMAGES_DIR}" /root/.codex/generated_images
+fi
+if [ ! -e "${CODEX_USER_HOME}/.codex/generated_images" ]; then
+  ln -sfn "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}/.codex/generated_images"
 fi
 
-if [ ! -f "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}/state.json" ]; then
-  printf '{"batches": {}, "jobs": {}, "uploads": {}}\n' > "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}/state.json"
+if [ ! -f "${DATA_DIR}/state.json" ]; then
+  printf '{"batches": {}, "jobs": {}, "uploads": {}}\n' > "${DATA_DIR}/state.json"
 fi
 
 if [ "$(id -u)" = "0" ]; then
-  chown -R "${APP_USER}:${APP_GROUP}" \
-    "${IMAGE_GEN_DATA_DIR:-/data/image-gen-service}" \
-    "${IMAGE_GEN_DEFAULT_WORKDIR:-/workspace}" \
-    "${IMAGE_GEN_CODEX_HOME:-/data/codex-home}" \
-    "${IMAGE_GEN_GENERATED_IMAGES_DIR:-/data/codex-home/generated_images}" \
-    "${IMAGE_GEN_CODEX_USER_HOME:-/home/imagegen}"
+  for path in "${DATA_DIR}" "${WORKDIR_PATH}" "${CODEX_HOME_PATH}" "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}"; do
+    chown -R "${APP_USER}:${APP_GROUP}" "${path}" 2>/dev/null || chmod -R ugo+rwX "${path}" 2>/dev/null || true
+  done
+
+  for path in "${DATA_DIR}" "${DATA_DIR}/jobs" "${DATA_DIR}/uploads" "${WORKDIR_PATH}" "${CODEX_HOME_PATH}" "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}"; do
+    if ! gosu "${APP_USER}:${APP_GROUP}" sh -c "test -w \"\$1\"" sh "${path}"; then
+      echo "image-gen-service: ${path} is not writable by ${APP_USER}. Fix the host mount permissions or use a Docker named volume." >&2
+      exit 1
+    fi
+  done
+
   exec gosu "${APP_USER}:${APP_GROUP}" "$@"
 fi
 

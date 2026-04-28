@@ -24,9 +24,9 @@ services:
       IMAGE_GEN_CODEX_BIN: ${CODEX_BIN_PATH:-/usr/local/bin/codex}
       IMAGE_GEN_CODEX_HOME: ${CODEX_HOME:-/data/codex-home}
       IMAGE_GEN_CODEX_USER_HOME: /home/imagegen
-      IMAGE_GEN_GENERATED_IMAGES_DIR: /root/.codex/generated_images
+      IMAGE_GEN_GENERATED_IMAGES_DIR: ${CODEX_HOME:-/data/codex-home}/generated_images
       IMAGE_GEN_FRONTEND_DIST_DIR: ${APP_HOME:-/opt/image-gen-service}/frontend/dist
-      IMAGE_GEN_FILE_ROOTS: ${APP_DATA_DIR:-/data/image-gen-service}:${APP_WORKDIR:-/workspace}:/root/.codex/generated_images
+      IMAGE_GEN_FILE_ROOTS: ${APP_DATA_DIR:-/data/image-gen-service}:${APP_WORKDIR:-/workspace}:${CODEX_HOME:-/data/codex-home}/generated_images
       IMAGE_GEN_JOB_TIMEOUT_SECONDS: ${IMAGE_GEN_JOB_TIMEOUT_SECONDS:-1800}
       IMAGE_GEN_MAX_CONCURRENCY: ${IMAGE_GEN_MAX_CONCURRENCY:-2}
       IMAGE_GEN_CORS_ORIGIN: ${IMAGE_GEN_CORS_ORIGIN:-*}
@@ -34,7 +34,7 @@ services:
       - ${HOST_DATA_DIR:-./runtime/data}:${APP_DATA_DIR:-/data/image-gen-service}
       - ${HOST_WORKDIR:-./runtime/workspace}:${APP_WORKDIR:-/workspace}
       - ${HOST_CODEX_HOME:-./runtime/codex-home}:${CODEX_HOME:-/data/codex-home}
-      - ${HOST_IMAGES_DIR:-./runtime/images}:/root/.codex/generated_images
+      - ${HOST_IMAGES_DIR:-./runtime/images}:${CODEX_HOME:-/data/codex-home}/generated_images
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8088/health"]
       interval: 30s

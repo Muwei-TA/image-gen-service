@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from app.codex_runner import build_prompt, command_string
 from app.config import Settings
 from app.manager import JobManager
+from app.pty_worker import TERMINAL_RESPONSES
 from app.result_parser import RESULT_PATTERN, extract_result_paths
 from app.store import StateStore
 from app.tmux_runner import TerminalRunner, TerminalSnapshot, TerminalTarget
@@ -53,21 +54,83 @@ class ServiceTests(unittest.TestCase):
     def test_terminal_runner_uses_pty_worker(self):
         if os.name != "posix":
             self.skipTest("PTY worker test requires a POSIX host")
-        settings = Settings.load()
-        runner = TerminalRunner(settings)
-        proc = runner.start(
-            runner.names_for("batch_pty", 0),
-            settings.root,
-            "printf 'hello from pty'",
-            settings.data_dir / "test-pty.log",
-        )
-        self.assertEqual(proc.wait(timeout=5), 0)
-        self.assertIn("hello from pty", (settings.data_dir / "test-pty.log").read_text())
+        with TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            settings = Settings(
+                root=tmp_path,
+                data_dir=tmp_path / "data",
+                codex_bin=Path(sys.executable),
+                codex_home=tmp_path / "codex-home",
+                codex_user_home=tmp_path,
+                terminal_bin="python3",
+                tmux_bin="tmux",
+                host="127.0.0.1",
+                port=0,
+                batch_prefix="$imagegen",
+                default_workdir=tmp_path,
+                job_timeout_seconds=30,
+                max_concurrency=2,
+                cors_origin="*",
+                frontend_dist_dir=tmp_path / "frontend" / "dist",
+                file_roots=(tmp_path / "data", tmp_path, tmp_path / "codex-home" / "generated_images"),
+                generated_images_dir=tmp_path / "codex-home" / "generated_images",
+                results_dir=tmp_path / "data" / "results",
+            )
+            settings.ensure_dirs()
+            runner = TerminalRunner(settings)
+            log_path = settings.data_dir / "test-pty.log"
+            proc = runner.start(
+                runner.names_for("batch_pty", 0),
+                settings.root,
+                "printf 'hello from pty'",
+                log_path,
+            )
+            self.assertEqual(proc.wait(timeout=5), 0)
+            self.assertIn("hello from pty", log_path.read_text())
 
     def test_result_pattern_matches_generated_image_path(self):
         output = "file:///tmp/codex-home/generated_images/abc/ig_test.png"
         self.assertIsNotNone(RESULT_PATTERN.search(output))
         self.assertEqual(extract_result_paths(output), ["/tmp/codex-home/generated_images/abc/ig_test.png"])
+
+    def test_pty_worker_handles_keyboard_protocol_query(self):
+        self.assertEqual(TERMINAL_RESPONSES[b"\x1b[?u"], b"\x1b[?0u")
+
+    def test_discover_generated_images_fallback(self):
+        with TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            settings = Settings(
+                root=tmp_path,
+                data_dir=tmp_path / "data",
+                codex_bin=Path(sys.executable),
+                codex_home=tmp_path / "codex-home",
+                codex_user_home=tmp_path,
+                terminal_bin="python3",
+                tmux_bin="tmux",
+                host="127.0.0.1",
+                port=0,
+                batch_prefix="$imagegen",
+                default_workdir=tmp_path,
+                job_timeout_seconds=30,
+                max_concurrency=2,
+                cors_origin="*",
+                frontend_dist_dir=tmp_path / "frontend" / "dist",
+                file_roots=(tmp_path / "data", tmp_path, tmp_path / "codex-home" / "generated_images"),
+                generated_images_dir=tmp_path / "codex-home" / "generated_images",
+                results_dir=tmp_path / "data" / "results",
+            )
+            settings.ensure_dirs()
+            settings.codex_home.mkdir(parents=True, exist_ok=True)
+            (settings.codex_home / "auth.json").write_text("{}", encoding="utf-8")
+            generated_dir = settings.generated_images_dir / "019dd316-6e53-70b1-a44a-b24ef9fa33dc"
+            generated_dir.mkdir(parents=True, exist_ok=True)
+            image_path = generated_dir / "ig_test.png"
+            image_path.write_bytes(b"fake-png-bytes")
+            manager = JobManager(settings, StateStore(settings.data_dir / "state.json"))
+            job = {
+                "started_at": "2026-04-28T08:00:00+00:00",
+            }
+            self.assertIn(str(image_path), manager._discover_generated_images(job))
 
     def test_batch_with_multiple_prompts_creates_multiple_jobs(self):
         class FakeProc:

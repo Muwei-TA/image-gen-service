@@ -32,7 +32,7 @@ docker run -d \
   -v "$PWD/runtime/data:/data/image-gen-service" \
   -v "$PWD/runtime/workspace:/workspace" \
   -v "$PWD/runtime/codex-home:/data/codex-home" \
-  -v "$PWD/runtime/images:/root/.codex/generated_images" \
+  -v "$PWD/runtime/images:/data/codex-home/generated_images" \
   muwei517/image-gen-service:latest
 ```
 
@@ -65,7 +65,7 @@ services:
       - ./runtime/data:/data/image-gen-service
       - ./runtime/workspace:/workspace
       - ./runtime/codex-home:/data/codex-home
-      - ./runtime/images:/root/.codex/generated_images
+      - ./runtime/images:/data/codex-home/generated_images
     restart: unless-stopped
 ```
 
@@ -99,7 +99,7 @@ These folders should be mounted if you want data to survive container updates:
 | `./runtime/data` | `/data/image-gen-service` | batches, jobs, uploads, archived results, service state |
 | `./runtime/workspace` | `/workspace` | default Codex working directory |
 | `./runtime/codex-home` | `/data/codex-home` | Codex login and settings |
-| `./runtime/images` | `/root/.codex/generated_images` | generated images |
+| `./runtime/images` | `/data/codex-home/generated_images` | generated images |
 
 Back up these folders if the generated work matters to you.
 
@@ -123,7 +123,7 @@ Advanced variables:
 | `IMAGE_GEN_CODEX_BIN` | `/usr/local/bin/codex` | Codex CLI executable. |
 | `IMAGE_GEN_CODEX_HOME` | `/data/codex-home` | Codex auth/config directory. |
 | `IMAGE_GEN_CODEX_USER_HOME` | `/home/imagegen` | `HOME` used for Codex subprocesses. |
-| `IMAGE_GEN_GENERATED_IMAGES_DIR` | `/root/.codex/generated_images` | Codex generated image directory. |
+| `IMAGE_GEN_GENERATED_IMAGES_DIR` | `/data/codex-home/generated_images` | Codex generated image directory. |
 | `IMAGE_GEN_RESULTS_DIR` | `${IMAGE_GEN_DATA_DIR}/results` | Service-managed result archive. |
 | `IMAGE_GEN_FILE_ROOTS` | data, workspace, generated images | Allowed roots for serving image files through `/files`. |
 | `IMAGE_GEN_FRONTEND_DIST_DIR` | `/opt/image-gen-service/frontend/dist` | Built frontend directory. |
@@ -144,7 +144,7 @@ docker run -d \
   -v "$PWD/runtime/data:/data/image-gen-service" \
   -v "$PWD/runtime/workspace:/workspace" \
   -v "$PWD/runtime/codex-home:/data/codex-home" \
-  -v "$PWD/runtime/images:/root/.codex/generated_images" \
+  -v "$PWD/runtime/images:/data/codex-home/generated_images" \
   muwei517/image-gen-service:latest
 ```
 
@@ -198,7 +198,7 @@ Make sure the generated image path is under one of the allowed roots in `IMAGE_G
 ```text
 /data/image-gen-service
 /workspace
-/root/.codex/generated_images
+/data/codex-home/generated_images
 ```
 
 ### Container cannot write to mounted folders

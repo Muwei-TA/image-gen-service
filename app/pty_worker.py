@@ -25,6 +25,7 @@ TERMINAL_RESPONSES = {
     b"\x1b[6n": b"\x1b[1;1R",
     b"\x1b[c": b"\x1b[?1;2c",
     b"\x1b[>c": b"\x1b[>0;276;0c",
+    b"\x1b[?u": b"\x1b[?0u",
     b"\x1b]10;?\x1b\\": b"\x1b]10;rgb:ffff/ffff/ffff\x1b\\",
     b"\x1b]11;?\x1b\\": b"\x1b]11;rgb:0000/0000/0000\x1b\\",
 }

@@ -27,20 +27,25 @@ def build_prompt(batch_prefix: str, batch_id: str, index: int, prompt: str, refe
 
 
 def command_parts(job: JobRecord, settings: Settings) -> list[str]:
+    codex_args = [
+        str(settings.codex_bin),
+        "exec",
+        "--skip-git-repo-check",
+        "--color",
+        "never",
+        "-C",
+        job.workdir,
+    ]
+    for image_path in getattr(job, "reference_images", []):
+        codex_args.extend(["--image", image_path])
+    codex_args.append(build_prompt(settings.batch_prefix, job.batch_id, job.index, job.prompt, getattr(job, "reference_images", [])))
     return [
         " ".join(
             [
-                f"cd {shlex.quote(job.workdir)}",
-                "&&",
                 f"HOME={shlex.quote(str(settings.codex_user_home))}",
                 f"CODEX_HOME={shlex.quote(str(settings.codex_home))}",
                 "TERM=xterm-256color",
-                shlex.join(
-                    [
-                        str(settings.codex_bin),
-                        build_prompt(settings.batch_prefix, job.batch_id, job.index, job.prompt, getattr(job, "reference_images", [])),
-                    ]
-                ),
+                shlex.join(codex_args),
             ]
         ),
     ]

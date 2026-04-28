@@ -186,7 +186,10 @@ class JobManager:
             snapshot = self.terminal.capture(Path(job["log_path"]))
             if snapshot.output and snapshot.output != last_output:
                 last_output = snapshot.output
-                result_paths = self._archive_results(job, extract_result_paths(snapshot.output))
+                result_paths = self._archive_results(
+                    job,
+                    self._resolve_result_paths(job, snapshot.output),
+                )
                 self.store.update_job(
                     job_id,
                     final_message=snapshot.output,
@@ -195,7 +198,10 @@ class JobManager:
                 )
             if time.monotonic() - started_at > self.settings.job_timeout_seconds + 15:
                 final_output = last_output or self._safe_read(job["log_path"])
-                result_paths = self._archive_results(job, extract_result_paths(final_output))
+                result_paths = self._archive_results(
+                    job,
+                    self._resolve_result_paths(job, final_output),
+                )
                 self._terminate_proc(proc)
                 self.store.update_job(
                     job_id,
@@ -214,8 +220,11 @@ class JobManager:
             if proc.poll() is not None:
                 rc = proc.returncode if proc.returncode is not None else 1
                 final_output = last_output or self._safe_read(job["log_path"])
-                result_paths = self._archive_results(job, extract_result_paths(final_output))
-                succeeded = rc == 0 or bool(result_paths)
+                result_paths = self._archive_results(
+                    job,
+                    self._resolve_result_paths(job, final_output),
+                )
+                succeeded = bool(result_paths)
                 self.store.update_job(
                     job_id,
                     status="succeeded" if succeeded else "failed",
@@ -224,13 +233,57 @@ class JobManager:
                     exit_code=0 if succeeded else rc,
                     final_message=final_output,
                     result_paths=result_paths,
-                    error="" if succeeded else job.get("error", ""),
+                    error="" if succeeded else job.get("error", "") or "No generated image was detected.",
                 )
                 self._refresh_batch(job["batch_id"])
                 self.procs.pop(job_id, None)
                 self._pump_queue()
                 return
             time.sleep(1)
+
+    def _resolve_result_paths(self, job: Dict[str, Any], output: str) -> list[str]:
+        result_paths = extract_result_paths(output)
+        if result_paths:
+            return result_paths
+        return self._discover_generated_images(job)
+
+    def _discover_generated_images(self, job: Dict[str, Any]) -> list[str]:
+        root = self.settings.generated_images_dir
+        if not root.exists():
+            return []
+        started_at = self._parse_iso_timestamp(job.get("started_at"))
+        min_mtime = started_at.timestamp() - 2 if started_at else 0
+        candidates: list[tuple[float, str]] = []
+        seen: set[str] = set()
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+                continue
+            try:
+                stat = path.stat()
+            except FileNotFoundError:
+                continue
+            if stat.st_mtime < min_mtime:
+                continue
+            text = str(path)
+            if text in seen:
+                continue
+            seen.add(text)
+            candidates.append((stat.st_mtime, text))
+        candidates.sort(key=lambda item: (item[0], item[1]))
+        return [path for _, path in candidates]
+
+    def _parse_iso_timestamp(self, value: Any) -> datetime | None:
+        if not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(str(value))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed
 
     def _archive_results(self, job: Dict[str, Any], paths: list[str]) -> list[str]:
         archived: list[str] = []

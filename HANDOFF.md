@@ -16,7 +16,7 @@
 ### 执行链路
 - `app/codex_runner.py`
   - 拼接 `codex` prompt，默认前缀是 `$imagegen`。
-  - 命令显式使用 `HOME=/root`、`CODEX_HOME=/root/.codex`、`TERM=xterm-256color`。
+  - 命令显式使用 `HOME=/home/imagegen`、`CODEX_HOME=/data/codex-home`、`TERM=xterm-256color`。
   - 默认 Codex 路径：`/vol1/1000/docker/ubuntu/bin/codex`。
 - `app/tmux_runner.py`
   - 保留历史类名 `TerminalRunner`，但不再依赖 tmux/script。
@@ -31,7 +31,7 @@
   - 启动 worker 子进程并轮询日志/进程状态。
   - 子进程返回 0 时把 job 标记为 `succeeded`，并刷新 batch 计数。
 - `app/result_parser.py`
-  - 从 Codex TUI 日志中提取 `generated_images/*.png` 路径，回写到 job 的 `result_paths`。
+  - 优先从 Codex TUI 日志中提取 `generated_images/*.png` 路径，若日志未打印路径，则扫描 `CODEX_HOME/generated_images` 作为兜底。
 - `app/uploads.py`
   - 支持 `POST /uploads` 上传 base64 图片，保存到 `data/uploads/{image_id}/...`。
   - batch 可通过 `reference_image_ids` 引用上传图，也可通过 `reference_images` 直接传容器路径或 URL。
@@ -59,7 +59,7 @@
   - job 状态：`succeeded`
   - batch 状态：`completed`
   - 结果路径出现在日志中：
-    - `/root/.codex/generated_images/019db5f5-02ef-7c71-8706-bf368fcc2ca8/ig_0604ef258a15d2ea0169e8f2f63c0c8194b404f6976716ec4d.png`
+    - `/data/codex-home/generated_images/019db5f5-02ef-7c71-8706-bf368fcc2ca8/ig_0604ef258a15d2ea0169e8f2f63c0c8194b404f6976716ec4d.png`
 - 批量 prompts 验证通过：
   - `batch_5ff5b3e8d140`
   - 两个 job 同时启动，状态均为 `succeeded`
@@ -72,7 +72,7 @@
 
 ## 已解决的问题
 1. 旧的 `script -qefc ...` 方式只启动伪终端，不能响应 Codex 的终端探测，容易卡住。
-2. 旧命令强制 `HOME=/home/muwei`、`CODEX_HOME=/home/muwei/.codex`，但容器内认证实际在 `/root/.codex`，会触发登录提示。
+2. 旧命令强制 `HOME=/home/muwei`、`CODEX_HOME=/home/muwei/.codex`，但容器内认证目录已经统一到 `/data/codex-home`，会触发登录提示。
 3. Codex TUI 生成图片后不一定自动退出；现在 worker 会检测结果路径并主动收尾。
 4. 批量提交多个提示词时，会为每个提示词启动独立 PTY/Codex job，并发运行。
 5. 上传图片、多图参考、批量 prompts 共用参考图已实现。

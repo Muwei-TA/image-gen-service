@@ -12,7 +12,7 @@ Deploy a working Image Gen Service instance:
 - Web port: `8088` by default
 - Runtime data persisted under a user-chosen directory
 - Codex login stored in a mounted `codex-home` directory
-- Generated images stored in a mounted `images` directory at `/root/.codex/generated_images`
+- Generated images stored in a mounted `images` directory at `/data/codex-home/generated_images`
 - Health endpoint verified
 - User given the final URL and Codex login instructions
 
@@ -87,7 +87,7 @@ services:
       - ./runtime/data:/data/image-gen-service
       - ./runtime/workspace:/workspace
       - ./runtime/codex-home:/data/codex-home
-      - ./runtime/images:/root/.codex/generated_images
+      - ./runtime/images:/data/codex-home/generated_images
     restart: unless-stopped
 ```
 
@@ -123,7 +123,7 @@ docker run -d \
   -v "$PWD/image-gen-service/runtime/data:/data/image-gen-service" \
   -v "$PWD/image-gen-service/runtime/workspace:/workspace" \
   -v "$PWD/image-gen-service/runtime/codex-home:/data/codex-home" \
-  -v "$PWD/image-gen-service/runtime/images:/root/.codex/generated_images" \
+  -v "$PWD/image-gen-service/runtime/images:/data/codex-home/generated_images" \
   muwei517/image-gen-service:latest
 ```
 
@@ -295,7 +295,7 @@ Ensure generated image paths are under allowed roots:
 ```text
 /data/image-gen-service
 /workspace
-/root/.codex/generated_images
+/data/codex-home/generated_images
 ```
 
 If custom roots are needed, set `IMAGE_GEN_FILE_ROOTS` with colon-separated paths.

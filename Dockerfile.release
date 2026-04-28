@@ -1,0 +1,75 @@
+FROM node:22-bookworm AS frontend-builder
+
+ARG VITE_IMAGE_GEN_DEFAULT_WORKDIR=/workspace
+ENV VITE_IMAGE_GEN_DEFAULT_WORKDIR=${VITE_IMAGE_GEN_DEFAULT_WORKDIR}
+
+WORKDIR /build/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+FROM ubuntu:22.04
+
+ARG APP_HOME=/opt/image-gen-service
+ARG APP_DATA_DIR=/data/image-gen-service
+ARG APP_WORKDIR=/workspace
+ARG CODEX_HOME=/data/codex-home
+ARG CODEX_BIN_PATH=/usr/local/bin/codex
+ARG CODEX_RUNTIME_DIR=/opt/codex-runtime
+ARG APP_USER=imagegen
+ARG APP_UID=10001
+ARG APP_GID=10001
+
+ENV PYTHONUNBUFFERED=1 \
+    IMAGE_GEN_HOST=0.0.0.0 \
+    IMAGE_GEN_PORT=8088 \
+    IMAGE_GEN_SERVICE_ROOT=${APP_HOME} \
+    IMAGE_GEN_DATA_DIR=${APP_DATA_DIR} \
+    IMAGE_GEN_DEFAULT_WORKDIR=${APP_WORKDIR} \
+    IMAGE_GEN_CODEX_BIN=${CODEX_BIN_PATH} \
+    IMAGE_GEN_CODEX_HOME=${CODEX_HOME} \
+    IMAGE_GEN_CODEX_USER_HOME=/home/${APP_USER} \
+    CODEX_RUNTIME_DIR=${CODEX_RUNTIME_DIR} \
+    IMAGE_GEN_GENERATED_IMAGES_DIR=${CODEX_HOME}/generated_images \
+    IMAGE_GEN_FRONTEND_DIST_DIR=${APP_HOME}/frontend/dist \
+    IMAGE_GEN_FILE_ROOTS=${APP_DATA_DIR}:${APP_WORKDIR}:${CODEX_HOME}/generated_images \
+    IMAGE_GEN_JOB_TIMEOUT_SECONDS=1800 \
+    IMAGE_GEN_MAX_CONCURRENCY=2 \
+    IMAGE_GEN_API_TOKEN= \
+    IMAGE_GEN_CORS_ORIGIN=* \
+    APP_USER=${APP_USER} \
+    APP_GROUP=${APP_USER}
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl gosu procps python3 && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid ${APP_GID} ${APP_USER} && \
+    useradd --uid ${APP_UID} --gid ${APP_GID} --create-home --shell /usr/sbin/nologin ${APP_USER}
+
+WORKDIR ${APP_HOME}
+
+COPY --chown=${APP_USER}:${APP_USER} app ./app
+COPY --chown=${APP_USER}:${APP_USER} tests ./tests
+COPY --chown=${APP_USER}:${APP_USER} scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --chown=${APP_USER}:${APP_USER} README.md HANDOFF.md pyproject.toml ./
+COPY --chown=${APP_USER}:${APP_USER} --from=frontend-builder /build/frontend/dist ./frontend/dist
+COPY release-context/codex-bin/codex ${CODEX_BIN_PATH}
+COPY release-context/codex-runtime ${CODEX_RUNTIME_DIR}
+
+RUN chmod +x ${CODEX_BIN_PATH} && \
+    mkdir -p ${APP_DATA_DIR}/jobs \
+             ${APP_DATA_DIR}/uploads \
+             ${APP_WORKDIR} \
+             ${CODEX_HOME} && \
+    printf '{"batches": {}, "jobs": {}, "uploads": {}}\n' > ${APP_DATA_DIR}/state.json && \
+    chown -R ${APP_USER}:${APP_USER} ${APP_HOME} ${APP_DATA_DIR} ${APP_WORKDIR} ${CODEX_HOME} /home/${APP_USER} && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
+
+EXPOSE 8088
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8088/health >/dev/null || exit 1
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["python3", "-m", "app.main"]

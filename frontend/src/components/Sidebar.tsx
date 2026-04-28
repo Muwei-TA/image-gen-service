@@ -34,6 +34,9 @@ const RATIOS = [
   { label: '9:16', value: '9:16', className: 'aspect-[9/16] w-7' },
 ];
 
+const MIN_COUNT = 1;
+const MAX_COUNT = 50;
+
 export function Sidebar({
   assets,
   selectedAssetIds,
@@ -60,6 +63,11 @@ export function Sidebar({
     const images = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
     if (images.length) onUploadFiles(images);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function updateCount(value: number) {
+    const next = Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.trunc(value) || MIN_COUNT));
+    setCount(next);
   }
 
   return (
@@ -113,16 +121,24 @@ export function Sidebar({
         <section className="mt-6 space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-slate-200">生成数量</label>
-            <span className="font-mono text-sm text-cyan-300">{count}</span>
+            <input
+              type="number"
+              min={MIN_COUNT}
+              max={MAX_COUNT}
+              value={count}
+              onChange={(event) => updateCount(Number(event.target.value))}
+              className="h-9 w-20 rounded-md border border-slate-700 bg-slate-950/60 px-2 text-right font-mono text-sm text-cyan-200 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+            />
           </div>
           <input
             type="range"
-            min="1"
-            max="8"
+            min={MIN_COUNT}
+            max={MAX_COUNT}
             value={count}
-            onChange={(event) => setCount(Number(event.target.value))}
+            onChange={(event) => updateCount(Number(event.target.value))}
             className="w-full accent-cyan-400"
           />
+          <p className="text-xs text-slate-500">单批最多 {MAX_COUNT} 张；同时运行数量由服务并发配置控制。</p>
         </section>
 
         <section className="mt-7 space-y-3">

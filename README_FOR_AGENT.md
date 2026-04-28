@@ -34,7 +34,7 @@ Ask or infer these values:
 | --- | --- | --- |
 | Deploy directory | `./image-gen-service` | Host folder that will contain runtime data. |
 | Host port | `8088` | Change if occupied. |
-| Max concurrency | `2` | Use `1` on low-resource machines or quota-limited accounts. |
+| Max concurrency | `8` | Use `1` on low-resource machines or quota-limited accounts. |
 | Docker Compose available | auto-detect | Prefer compose when available. |
 
 ## Preflight Checks
@@ -81,7 +81,7 @@ services:
     ports:
       - "${IMAGE_GEN_HOST_PORT:-8088}:8088"
     environment:
-      IMAGE_GEN_MAX_CONCURRENCY: "${IMAGE_GEN_MAX_CONCURRENCY:-2}"
+      IMAGE_GEN_MAX_CONCURRENCY: "${IMAGE_GEN_MAX_CONCURRENCY:-8}"
       IMAGE_GEN_CORS_ORIGIN: "${IMAGE_GEN_CORS_ORIGIN:-*}"
     volumes:
       - ./runtime/data:/data/image-gen-service
@@ -95,7 +95,7 @@ Create `image-gen-service/.env`:
 
 ```env
 IMAGE_GEN_HOST_PORT=8088
-IMAGE_GEN_MAX_CONCURRENCY=2
+IMAGE_GEN_MAX_CONCURRENCY=8
 IMAGE_GEN_CORS_ORIGIN=*
 ```
 
@@ -119,7 +119,7 @@ mkdir -p image-gen-service/runtime/data \
 docker run -d \
   --name image-gen-service \
   -p 8088:8088 \
-  -e IMAGE_GEN_MAX_CONCURRENCY="2" \
+  -e IMAGE_GEN_MAX_CONCURRENCY="8" \
   -v "$PWD/image-gen-service/runtime/data:/data/image-gen-service" \
   -v "$PWD/image-gen-service/runtime/workspace:/workspace" \
   -v "$PWD/image-gen-service/runtime/codex-home:/data/codex-home" \
@@ -162,7 +162,7 @@ Expected healthy shape:
     "available": true,
     "authenticated": true,
     "auth_path": "/data/codex-home/auth.json",
-    "max_concurrency": 2
+    "max_concurrency": 8
   }
 }
 ```

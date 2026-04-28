@@ -60,7 +60,7 @@ services:
     ports:
       - "8088:8088"
     environment:
-      IMAGE_GEN_MAX_CONCURRENCY: "2"
+      IMAGE_GEN_MAX_CONCURRENCY: "8"
     volumes:
       - ./runtime/data:/data/image-gen-service
       - ./runtime/workspace:/workspace
@@ -109,7 +109,7 @@ Most users only need these variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `IMAGE_GEN_MAX_CONCURRENCY` | `2` | Maximum number of Codex jobs running at once. Lower this if your machine or account quota is limited. |
+| `IMAGE_GEN_MAX_CONCURRENCY` | `8` | Maximum number of Codex jobs running at once. Lower this if your machine or account quota is limited. |
 | `IMAGE_GEN_JOB_TIMEOUT_SECONDS` | `1800` | Maximum job runtime before timeout handling. |
 | `IMAGE_GEN_CORS_ORIGIN` | `*` | CORS origin. Restrict this behind a reverse proxy if needed. |
 | `IMAGE_GEN_PORT` | `8088` | Port used inside the container. Usually leave this unchanged and map host ports with Docker. |

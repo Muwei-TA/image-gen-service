@@ -44,6 +44,20 @@ class ServiceTests(unittest.TestCase):
         self.assertIn(str(settings.codex_home), cmd)
         self.assertIn("TERM=xterm-256color", cmd)
 
+    def test_command_string_places_prompt_before_reference_images(self):
+        settings = Settings.load()
+        job = type("J", (), {
+            "batch_id": "batch_1",
+            "index": 0,
+            "prompt": "hello with references",
+            "workdir": str(settings.default_workdir),
+            "reference_images": ["/tmp/ref-a.png", "/tmp/ref-b.png"],
+        })()
+        cmd = command_string(job, settings)
+        self.assertIn(" exec ", cmd)
+        self.assertLess(cmd.index("hello with references"), cmd.index("--image /tmp/ref-a.png"))
+        self.assertLess(cmd.index("hello with references"), cmd.index("--image /tmp/ref-b.png"))
+
     def test_terminal_names(self):
         settings = Settings.load()
         runner = TerminalRunner(settings)

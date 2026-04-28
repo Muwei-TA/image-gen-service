@@ -36,9 +36,9 @@ def command_parts(job: JobRecord, settings: Settings) -> list[str]:
         "-C",
         job.workdir,
     ]
+    codex_args.append(build_prompt(settings.batch_prefix, job.batch_id, job.index, job.prompt, getattr(job, "reference_images", [])))
     for image_path in getattr(job, "reference_images", []):
         codex_args.extend(["--image", image_path])
-    codex_args.append(build_prompt(settings.batch_prefix, job.batch_id, job.index, job.prompt, getattr(job, "reference_images", [])))
     return [
         " ".join(
             [

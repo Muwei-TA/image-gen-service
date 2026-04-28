@@ -8,6 +8,8 @@ Image Gen Service 是一个基于 Codex CLI 的浏览器批量生图工作台。
 
 当前公开镜像不需要服务 API token。如果接口返回 `unauthorized`，通常是旧容器、旧镜像、反向代理鉴权或浏览器访问到了旧服务。
 
+如果你希望让 AI 智能体或自动化工具帮你部署，请直接把 [README_FOR_AGENT.md](README_FOR_AGENT.md) 交给它。普通 README 只面向用户部署和使用公开 Docker 镜像。
+
 ## 功能
 
 - Web UI 生图工作台。
@@ -287,34 +289,3 @@ curl -fsS http://127.0.0.1:8088/health
 ### 挂载目录无法写入
 
 容器入口脚本会尝试修复挂载目录权限。如果宿主机文件系统阻止 `chown`，请换成本地可写目录或 Docker named volume。
-
-## 开发和构建
-
-运行后端测试：
-
-```bash
-python3 -m unittest discover -s tests
-```
-
-构建前端：
-
-```bash
-cd frontend
-npm ci
-npm run build
-```
-
-直接运行 Python 服务：
-
-```bash
-python3 -m app.main
-```
-
-构建发布镜像时请使用 release 构建流程，不要用 `docker commit` 从正在运行的用户容器发布镜像，否则可能带入 Codex 凭证、任务日志、上传图或生成图。
-
-```bash
-export CODEX_BIN=/path/to/codex
-export CODEX_RUNTIME=/path/to/codex/runtime
-
-./scripts/build_release_image.sh image-gen-service:release
-```

@@ -233,7 +233,7 @@ export default function App() {
   }, [assets]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0b1120] text-slate-100">
+    <div className="flex h-screen overflow-hidden bg-background text-text">
       <Sidebar
         assets={assets}
         selectedAssetIds={selectedAssetIds}
@@ -251,11 +251,11 @@ export default function App() {
 
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[1500px] px-7 py-6">
-          <header className="mb-6 flex flex-col gap-4 border-b border-slate-800 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <header className="mb-6 flex flex-col gap-4 border-b border-gray-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-cyan-300/80">Batch Queue</p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">生图任务工作台</h2>
-              <p className="mt-2 text-sm text-slate-400">提交后每张图会进入独立任务卡，完成前保留所选比例的等待画面。</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-primary">Batch Queue</p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-text">生图任务工作台</h2>
+              <p className="mt-2 text-sm text-gray-500">提交后每张图会进入独立任务卡，完成前保留所选比例的等待画面。</p>
             </div>
             <div className="grid grid-cols-3 gap-3 text-right">
           <Metric label="队列中" value={runningCount} />
@@ -265,24 +265,24 @@ export default function App() {
           </header>
 
           {health?.codex && (!health.codex.available || !health.codex.authenticated) && (
-            <div className="mb-5 rounded-lg border border-amber-400/30 bg-amber-950/25 px-4 py-3 text-sm text-amber-100">
+            <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               Codex {health.codex.available ? '尚未登录' : '不可用'}。生图前请在容器内执行：
-              <code className="ml-2 rounded bg-black/35 px-2 py-1 text-amber-50">codex</code>
+              <code className="ml-2 rounded bg-black/10 px-2 py-1 text-amber-900">codex</code>
             </div>
           )}
 
           {error && (
-            <div className="mb-5 rounded-lg border border-red-500/30 bg-red-950/30 px-4 py-3 text-sm text-red-200">
+            <div className="mb-5 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
               {error}
             </div>
           )}
 
           {allJobs.length === 0 ? (
-            <div className="flex min-h-[520px] items-center justify-center rounded-lg border border-dashed border-slate-800 bg-slate-950/30">
+            <div className="flex min-h-[520px] items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white">
               <div className="max-w-sm text-center">
-                <div className="mx-auto mb-5 h-24 w-40 rounded-md border border-cyan-300/40 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.2),transparent_46%),linear-gradient(135deg,#111827,#020617)]" />
-                <h3 className="text-lg font-medium text-white">还没有排队任务</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-500">输入提示词、选择比例和数量，也可以先上传或选择参考图。</p>
+                <div className="mx-auto mb-5 h-24 w-40 rounded-md border border-primary/20 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.1),transparent_46%),linear-gradient(135deg,#ffffff,#f8fafc)]" />
+                <h3 className="text-lg font-medium text-text">还没有排队任务</h3>
+                <p className="mt-2 text-sm leading-6 text-gray-500">输入提示词、选择比例和数量，也可以先上传或选择参考图。</p>
               </div>
             </div>
           ) : (
@@ -306,9 +306,9 @@ export default function App() {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="min-w-24 rounded-lg border border-slate-800 bg-slate-950/40 px-4 py-3">
-      <div className="text-xl font-semibold text-white">{value}</div>
-      <div className="mt-1 text-xs text-slate-500">{label}</div>
+    <div className="min-w-24 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+      <div className="text-xl font-semibold text-text">{value}</div>
+      <div className="mt-1 text-xs text-gray-500">{label}</div>
     </div>
   );
 }

@@ -71,32 +71,32 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full w-[360px] shrink-0 flex-col border-r border-slate-800 bg-[#111827]">
-      <div className="border-b border-slate-800 px-6 py-5">
-        <div className="flex items-center gap-3 text-cyan-300">
+    <aside className="flex h-full w-[360px] shrink-0 flex-col border-r border-gray-200 bg-white">
+      <div className="border-b border-gray-200 px-6 py-5">
+        <div className="flex items-center gap-3 text-primary">
           <MagicWand weight="duotone" size={28} />
           <div>
-            <h1 className="text-lg font-semibold text-white">Image Batch Studio</h1>
-            <p className="mt-1 text-xs text-slate-400">提示词、参考图和队列一处完成</p>
+            <h1 className="text-lg font-semibold text-text">Image Batch Studio</h1>
+            <p className="mt-1 text-xs text-gray-500">提示词、参考图和队列一处完成</p>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <section className="space-y-3">
-          <label className="text-sm font-medium text-slate-200">提示词</label>
+          <label className="text-sm font-medium text-text">提示词</label>
           <textarea
             value={prompt}
             onChange={(event) => onPromptChange(event.target.value)}
             placeholder="例如：21:9 动漫女孩直播间截图，霓虹灯，细腻线稿，干净画面"
-            className="h-36 w-full resize-none rounded-lg border border-slate-700 bg-slate-950/60 p-3 text-sm leading-6 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+            className="h-36 w-full resize-none rounded-lg border border-gray-300 bg-gray-50 p-3 text-sm leading-6 text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </section>
 
         <section className="mt-6 space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-200">图片比例</label>
-            <span className="text-xs text-slate-500">{ratio}</span>
+            <label className="text-sm font-medium text-text">图片比例</label>
+            <span className="text-xs text-gray-500">{ratio}</span>
           </div>
           <div className="grid grid-cols-5 gap-2">
             {RATIOS.map((item) => (
@@ -105,10 +105,10 @@ export function Sidebar({
                 type="button"
                 onClick={() => setRatio(item.value)}
                 className={cn(
-                  'flex h-[72px] flex-col items-center justify-center gap-2 rounded-lg border text-xs transition',
+                  'flex h-[72px] flex-col items-center justify-center gap-2 rounded-lg border text-xs transition cursor-pointer',
                   ratio === item.value
-                    ? 'border-cyan-400 bg-cyan-400/10 text-cyan-200'
-                    : 'border-slate-700 bg-slate-950/30 text-slate-400 hover:border-slate-500 hover:text-slate-200',
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-400 hover:text-gray-700',
                 )}
               >
                 <span className={cn('block rounded-[3px] border-2 border-current', item.className)} />
@@ -120,14 +120,14 @@ export function Sidebar({
 
         <section className="mt-6 space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-200">生成数量</label>
+            <label className="text-sm font-medium text-text">生成数量</label>
             <input
               type="number"
               min={MIN_COUNT}
               max={MAX_COUNT}
               value={count}
               onChange={(event) => updateCount(Number(event.target.value))}
-              className="h-9 w-20 rounded-md border border-slate-700 bg-slate-950/60 px-2 text-right font-mono text-sm text-cyan-200 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+              className="h-9 w-20 rounded-md border border-gray-300 bg-gray-50 px-2 text-right font-mono text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </div>
           <input
@@ -136,19 +136,19 @@ export function Sidebar({
             max={MAX_COUNT}
             value={count}
             onChange={(event) => updateCount(Number(event.target.value))}
-            className="w-full accent-cyan-400"
+            className="w-full accent-primary cursor-pointer"
           />
-          <p className="text-xs text-slate-500">单批最多 {MAX_COUNT} 张；同时运行数量由服务并发配置控制。</p>
+          <p className="text-xs text-gray-500">单批最多 {MAX_COUNT} 张；同时运行数量由服务并发配置控制。</p>
         </section>
 
         <section className="mt-7 space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-slate-200">素材库</label>
+            <label className="text-sm font-medium text-text">素材库</label>
             {selectedCount > 0 && (
               <button
                 type="button"
                 onClick={onClearSelection}
-                className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200"
+                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 cursor-pointer"
               >
                 <Trash size={14} />
                 清空
@@ -167,7 +167,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-600 px-4 py-3 text-sm text-slate-300 transition hover:border-cyan-400 hover:bg-cyan-400/5 hover:text-cyan-100"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-600 transition hover:border-primary hover:bg-primary/5 hover:text-primary cursor-pointer"
           >
             {isUploading ? <SpinnerGap size={18} className="animate-spin" /> : <UploadSimple size={18} />}
             {isUploading ? '上传中' : '上传参考图'}
@@ -191,7 +191,7 @@ export function Sidebar({
         </section>
       </div>
 
-      <div className="border-t border-slate-800 p-6">
+      <div className="border-t border-gray-200 p-6 bg-gray-50">
         <button
           type="button"
           disabled={!prompt.trim() || isSubmitting}
@@ -199,14 +199,14 @@ export function Sidebar({
           className={cn(
             'flex w-full items-center justify-center gap-2 rounded-lg px-4 py-4 text-sm font-semibold transition active:scale-[0.99]',
             !prompt.trim() || isSubmitting
-              ? 'cursor-not-allowed bg-slate-800 text-slate-500'
-              : 'bg-cyan-400 text-slate-950 shadow-[0_14px_40px_rgba(34,211,238,0.22)] hover:bg-cyan-300',
+              ? 'cursor-not-allowed bg-gray-200 text-gray-500'
+              : 'bg-cta text-white shadow-md hover:bg-ctaHover cursor-pointer',
           )}
         >
           {isSubmitting ? <SpinnerGap size={20} className="animate-spin" /> : <ImageSquare size={20} weight="bold" />}
           {isSubmitting ? '提交中' : `生成 ${count} 张`}
         </button>
-        <p className="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
+        <p className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-500">
           <FileImage size={14} />
           {isGenerating ? '队列运行中，仍可继续提交新任务' : `当前选中 ${selectedCount} 张参考图`}
         </p>
@@ -236,12 +236,12 @@ function AssetGroup({
 
   return (
     <div className="pt-2">
-      <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
+      <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
         <span>{title}</span>
         <span>{assets.length}</span>
       </div>
       {assets.length === 0 ? (
-        <div className="rounded-lg border border-slate-800 bg-slate-950/30 px-3 py-4 text-center text-xs text-slate-600">{emptyText}</div>
+        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-center text-xs text-gray-500">{emptyText}</div>
       ) : (
         <div className="grid grid-cols-3 gap-2">
           {visibleAssets.map((asset) => {
@@ -253,13 +253,13 @@ function AssetGroup({
                 onClick={() => onToggleAsset(asset.id)}
                 title={asset.label}
                 className={cn(
-                  'group relative aspect-square overflow-hidden rounded-md border bg-slate-900 transition',
-                  selected ? 'border-cyan-300 ring-2 ring-cyan-400/30' : 'border-slate-800 hover:border-slate-500',
+                  'group relative aspect-square overflow-hidden rounded-md border bg-gray-100 transition cursor-pointer',
+                  selected ? 'border-primary ring-2 ring-primary/30' : 'border-gray-200 hover:border-gray-400',
                 )}
               >
                 <img src={asset.src} alt={asset.label} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                 {selected && (
-                  <span className="absolute right-1.5 top-1.5 rounded-full bg-cyan-300 p-1 text-slate-950">
+                  <span className="absolute right-1.5 top-1.5 rounded-full bg-primary p-1 text-white">
                     <Check size={12} weight="bold" />
                   </span>
                 )}
@@ -282,7 +282,7 @@ function AssetGroup({
                         onDeleteAsset(asset.id);
                       }
                     }}
-                    className="absolute left-1.5 top-1.5 rounded bg-black/65 p-1 text-white opacity-0 transition hover:bg-red-500 group-hover:opacity-100"
+                    className="absolute left-1.5 top-1.5 rounded bg-black/65 p-1 text-white opacity-0 transition hover:bg-red-500 group-hover:opacity-100 cursor-pointer"
                   >
                     <Trash size={12} weight="bold" />
                   </span>
@@ -294,7 +294,7 @@ function AssetGroup({
             <button
               type="button"
               onClick={() => setVisibleCount((current) => current + 18)}
-              className="aspect-square rounded-md border border-slate-800 bg-slate-950/60 text-xs text-slate-400 transition hover:border-cyan-400 hover:text-cyan-200"
+              className="aspect-square rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-500 transition hover:border-primary hover:text-primary cursor-pointer"
             >
               +{hiddenCount}
             </button>

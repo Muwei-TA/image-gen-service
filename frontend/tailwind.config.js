@@ -7,13 +7,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#0F172A',
-        surface: '#1E293B',
-        primary: '#8B5CF6',
-        primaryHover: '#7C3AED',
+        background: '#F5F3FF',
+        surface: '#FFFFFF',
+        primary: '#6366F1',
+        primaryHover: '#4F46E5',
+        secondary: '#818CF8',
+        cta: '#10B981',
+        ctaHover: '#059669',
+        text: '#1E1B4B',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
         mono: ['Fira Code', 'monospace'],
       },
     },

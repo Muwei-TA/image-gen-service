@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-background text-gray-100 font-sans antialiased;
+    @apply bg-background text-text font-sans antialiased;
   }
 }
 
@@ -22,7 +22,7 @@
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%);
+  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
   background-size: 200% 100%;
   animation: shimmer 2s infinite linear;
 }

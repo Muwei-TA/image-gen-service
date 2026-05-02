@@ -1,26 +1,26 @@
 # Image Gen Service
 
-[中文文档](README.zh-CN.md) | [Agent deployment guide](README_FOR_AGENT.md)
+[中文文档](README.zh-CN.md)
 
-Image Gen Service is a browser-based batch image generation workspace powered by Codex CLI. It lets you enter prompts, choose aspect ratios and image counts, upload reference images, watch multiple jobs run in parallel, cancel stuck jobs, and download generated results.
+Image Gen Service is a browser-based batch image generation workspace powered by Codex CLI. It lets you enter prompts, choose aspect ratios and image counts, upload reference images, watch jobs run in parallel, preview generated images, reuse results as references, cancel stuck jobs, and download generated results.
 
-The app is designed to run as a Docker service. Your Codex login, prompts, uploads, logs, and generated images stay in mounted runtime folders, not in the published image.
+The recommended image is `muwei517/image-gen-service:latest`. The app is designed to run as a Docker service. Your Codex login, prompts, uploads, logs, and generated images stay in mounted runtime folders, not in the published image.
 
 The current published image does not require a service API token. If an endpoint returns `unauthorized`, make sure you are not running an old container, an old image, or a reverse proxy that adds its own authentication.
 
-If you want an AI agent or automation tool to deploy this service for you, give it [README_FOR_AGENT.md](README_FOR_AGENT.md). The regular README is focused on end-user deployment and usage of the published Docker image.
-
 ## What You Get
 
-- Web UI for prompt-based image generation.
-- Batch generation with one Codex worker per image.
+- Commercial-style web UI for prompt-based image generation.
+- Batch generation with one Codex worker per image, up to the configured concurrency limit.
 - Aspect ratio and count controls. The UI supports `1-50` images per batch.
+- Optional dark mode.
+- Click-to-preview generated images.
 - Reference image upload and reuse.
 - Multiple reference images per batch.
 - Generated image reuse as future references.
 - Job queue with running, completed, failed, and canceled states.
 - Batch zip download.
-- Docker image that does not include Codex credentials or user history.
+- Docker image that does not include Codex credentials, runtime data, generated images, docs, or local MCP work.
 
 ## Quick Start
 
@@ -67,7 +67,7 @@ services:
     ports:
       - "8088:8088"
     environment:
-      IMAGE_GEN_MAX_CONCURRENCY: "8"
+      IMAGE_GEN_MAX_CONCURRENCY: "50"
     volumes:
       - ./runtime/data:/data/image-gen-service
       - ./runtime/workspace:/workspace
@@ -99,7 +99,7 @@ Prompts can include normal image instructions and aspect ratio hints. The UI app
 
 Reference images can be uploaded in the UI, selected from previous uploads, or reused from generated results. When reference images are selected, each Codex job receives the prompt plus `--image` arguments for the selected images.
 
-The image count is not the same as concurrency. A batch can contain more images than the current concurrency limit. `IMAGE_GEN_MAX_CONCURRENCY` only controls how many Codex jobs run at the same time.
+By default, the published image sets `IMAGE_GEN_MAX_CONCURRENCY=50`, matching the UI's maximum batch size. If you lower this value, larger batches will queue and run only up to the configured concurrency limit.
 
 ## Runtime Folders
 
@@ -120,7 +120,7 @@ Most users only need these variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `IMAGE_GEN_MAX_CONCURRENCY` | `8` | Maximum number of Codex jobs running at once. Lower this if your machine or account quota is limited. |
+| `IMAGE_GEN_MAX_CONCURRENCY` | `50` | Maximum number of Codex jobs running at once. The published image defaults to 50 so a 50-image batch can run fully in parallel if the host and account quota allow it. Lower this if your machine or account quota is limited. |
 | `IMAGE_GEN_JOB_TIMEOUT_SECONDS` | `1800` | Maximum job runtime before timeout handling. |
 | `IMAGE_GEN_CORS_ORIGIN` | `*` | CORS origin. Restrict this behind a reverse proxy if needed. |
 | `IMAGE_GEN_PORT` | `8088` | Port used inside the container. Usually leave this unchanged and map host ports with Docker. |
@@ -179,6 +179,10 @@ The published Docker image is intended to exclude:
 - uploaded reference images
 - generated images
 - job logs and previous prompts
+- local `.env` files
+- local `runtime/` folders
+- local `mcp/` development work
+- project documentation files
 
 User runtime data lives in the mounted folders. Do not publish, share, or bake those folders into a public image.
 
@@ -290,7 +294,7 @@ curl -X POST http://localhost:8088/batches \
   -d '{
     "prompt": "Create a cinematic product image --ar 16:9",
     "count": 4,
-    "reference_image_ids": ["upload_id_1", "upload_id_2"]
+    "reference_image_ids": ["img_example1", "img_example2"]
   }'
 ```
 

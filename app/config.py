@@ -10,6 +10,7 @@ class Settings:
     root: Path
     data_dir: Path
     codex_bin: Path
+    codex_model: str
     codex_home: Path
     codex_user_home: Path
     terminal_bin: str
@@ -44,6 +45,7 @@ class Settings:
             root=root,
             data_dir=data_dir,
             codex_bin=Path(os.environ.get("IMAGE_GEN_CODEX_BIN", "codex")),
+            codex_model=os.environ.get("IMAGE_GEN_CODEX_MODEL", "gpt-5.4-mini"),
             codex_home=codex_home,
             codex_user_home=codex_user_home,
             terminal_bin=os.environ.get("IMAGE_GEN_TERMINAL_BIN", "python3"),

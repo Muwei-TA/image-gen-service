@@ -30,6 +30,8 @@ def command_parts(job: JobRecord, settings: Settings) -> list[str]:
     codex_args = [
         str(settings.codex_bin),
         "exec",
+        "--model",
+        settings.codex_model,
         "--skip-git-repo-check",
         "--color",
         "never",

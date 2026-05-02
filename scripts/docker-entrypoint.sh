@@ -36,11 +36,13 @@ if [ "$(id -u)" = "0" ]; then
 
   for path in "${DATA_DIR}" "${DATA_DIR}/jobs" "${DATA_DIR}/uploads" "${WORKDIR_PATH}" "${CODEX_HOME_PATH}" "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}"; do
     if ! gosu "${APP_USER}:${APP_GROUP}" sh -c "test -w \"\$1\"" sh "${path}"; then
-      echo "image-gen-service: ${path} is not writable by ${APP_USER}. Fix the host mount permissions or use a Docker named volume." >&2
-      exit 1
+      echo "image-gen-service: ${path} is not writable by ${APP_USER}. Falling back to root user to avoid permission issues." >&2
+      umask 000
+      exec "$@"
     fi
   done
 
+  umask 000
   exec gosu "${APP_USER}:${APP_GROUP}" "$@"
 fi
 

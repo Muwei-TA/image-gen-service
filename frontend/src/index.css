@@ -1,3 +1,6 @@
+/* Import Plus Jakarta Sans */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +8,20 @@
 @layer base {
   body {
     @apply bg-background text-text font-sans antialiased;
+    background:
+      radial-gradient(circle at top left, rgba(219, 234, 254, 0.65), transparent 34rem),
+      linear-gradient(180deg, #ffffff 0%, #f8fafc 42%, #eef2f7 100%);
+  }
+
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+    background:
+      radial-gradient(circle at top left, rgba(37, 99, 235, 0.22), transparent 32rem),
+      linear-gradient(180deg, #020617 0%, #0f172a 45%, #111827 100%);
+  }
+
+  * {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cta/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
 }
 
@@ -29,4 +46,12 @@
 
 .animate-scanline {
   animation: scanline 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer,
+  .animate-scanline,
+  .animate-spin {
+    animation: none;
+  }
 }

@@ -24,6 +24,7 @@ settings.ensure_dirs()
 store = StateStore(settings.data_dir / "state.json")
 store.reconcile_interrupted_jobs()
 manager = JobManager(settings, store)
+MAX_JSON_BYTES = 32 * 1024 * 1024
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -50,6 +51,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _read_json(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))
+        if length > MAX_JSON_BYTES:
+            raise ValueError("request body is too large")
         raw = self.rfile.read(length) if length > 0 else b""
         return json.loads(raw.decode("utf-8")) if raw else {}
 
@@ -101,10 +104,14 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
             return
 
-        file_path = dist_dir / path.lstrip("/")
+        dist_root = dist_dir.resolve()
+        file_path = (dist_root / path.lstrip("/")).resolve()
+        if not (file_path == dist_root or dist_root in file_path.parents):
+            self._send_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
+            return
         if not file_path.exists() or file_path.is_dir():
-            file_path = dist_dir / "index.html"
-            
+            file_path = dist_root / "index.html"
+
         if not file_path.exists():
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
             return

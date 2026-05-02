@@ -68,6 +68,17 @@ class StateStore:
             self._save_locked()
             return dict(job)
 
+    def update_job_if_status(self, job_id: str, expected_statuses: set[str], **updates: Any) -> Dict[str, Any]:
+        with self.lock:
+            job = self.state["jobs"][job_id]
+            if job.get("status") not in expected_statuses:
+                return dict(job)
+            for key, value in updates.items():
+                if value is not None:
+                    job[key] = value
+            self._save_locked()
+            return dict(job)
+
     def update_batch(self, batch_id: str, **updates: Any) -> Dict[str, Any]:
         with self.lock:
             batch = self.state["batches"][batch_id]
@@ -154,10 +165,10 @@ class StateStore:
                 succeeded = sum(1 for job in jobs if job.get("status") == "succeeded")
                 failed = sum(1 for job in jobs if job.get("status") == "failed")
                 canceled = sum(1 for job in jobs if job.get("status") == "canceled")
-                if queued:
-                    status = "queued"
-                elif running:
+                if running:
                     status = "running"
+                elif queued:
+                    status = "queued"
                 elif failed or canceled:
                     status = "finished_with_errors"
                 else:

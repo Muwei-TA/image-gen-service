@@ -28,7 +28,7 @@ services:
       IMAGE_GEN_FRONTEND_DIST_DIR: ${APP_HOME:-/opt/image-gen-service}/frontend/dist
       IMAGE_GEN_FILE_ROOTS: ${APP_DATA_DIR:-/data/image-gen-service}:${APP_WORKDIR:-/workspace}:${CODEX_HOME:-/data/codex-home}/generated_images
       IMAGE_GEN_JOB_TIMEOUT_SECONDS: ${IMAGE_GEN_JOB_TIMEOUT_SECONDS:-1800}
-      IMAGE_GEN_MAX_CONCURRENCY: ${IMAGE_GEN_MAX_CONCURRENCY:-8}
+      IMAGE_GEN_MAX_CONCURRENCY: ${IMAGE_GEN_MAX_CONCURRENCY:-50}
       IMAGE_GEN_CORS_ORIGIN: ${IMAGE_GEN_CORS_ORIGIN:-*}
     volumes:
       - ${HOST_DATA_DIR:-./runtime/data}:${APP_DATA_DIR:-/data/image-gen-service}

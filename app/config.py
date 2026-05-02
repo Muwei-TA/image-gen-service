@@ -53,7 +53,7 @@ class Settings:
             batch_prefix=os.environ.get("IMAGE_GEN_BATCH_PREFIX", "$imagegen"),
             default_workdir=default_workdir,
             job_timeout_seconds=int(os.environ.get("IMAGE_GEN_JOB_TIMEOUT_SECONDS", "1800")),
-            max_concurrency=max(1, int(os.environ.get("IMAGE_GEN_MAX_CONCURRENCY", "8"))),
+            max_concurrency=max(1, int(os.environ.get("IMAGE_GEN_MAX_CONCURRENCY", "50"))),
             cors_origin=os.environ.get("IMAGE_GEN_CORS_ORIGIN", "*").strip() or "*",
             frontend_dist_dir=Path(os.environ.get("IMAGE_GEN_FRONTEND_DIST_DIR", str(root / "frontend" / "dist"))),
             file_roots=file_roots,

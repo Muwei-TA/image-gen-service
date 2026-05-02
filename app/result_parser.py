@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 
-RESULT_PATTERN = re.compile(r"(?:file://)?(/[^\s\x1b]+generated_images/[^\s\x1b]+\.png)")
+RESULT_PATTERN = re.compile(r"(?:file://)?(/[^\s\x1b'\"<>]+generated_images/[^\s\x1b'\"<>]+\.(?:png|jpe?g|webp))", re.IGNORECASE)
 
 
 def extract_result_paths(output: str) -> list[str]:

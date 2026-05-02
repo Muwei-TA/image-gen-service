@@ -5,6 +5,7 @@ from threading import RLock, Thread
 from typing import Any, Dict
 from datetime import datetime, timezone
 import os
+import re
 import signal
 import shutil
 import time
@@ -15,6 +16,9 @@ from app.models import BatchRecord, JobRecord, new_id, now_iso
 from app.result_parser import extract_result_paths
 from app.store import StateStore
 from app.tmux_runner import TerminalRunner
+
+
+SESSION_ID_RE = re.compile(r"session id:\s*([0-9a-f-]+)", re.IGNORECASE)
 
 
 class JobManager:
@@ -190,8 +194,9 @@ class JobManager:
                     job,
                     self._resolve_result_paths(job, snapshot.output),
                 )
-                self.store.update_job(
+                self.store.update_job_if_status(
                     job_id,
+                    {"running"},
                     final_message=snapshot.output,
                     result_paths=result_paths,
                     stage="image_detected" if result_paths else "generating",
@@ -202,9 +207,14 @@ class JobManager:
                     job,
                     self._resolve_result_paths(job, final_output),
                 )
-                self._terminate_proc(proc)
-                self.store.update_job(
+                worker_pid = getattr(proc, "pid", None)
+                if worker_pid:
+                    self._kill_process_tree(int(worker_pid))
+                else:
+                    self._terminate_proc(proc)
+                updated = self.store.update_job_if_status(
                     job_id,
+                    {"running"},
                     status="succeeded" if result_paths else "failed",
                     stage="finished" if result_paths else "timeout",
                     finished_at=now_iso(),
@@ -213,7 +223,7 @@ class JobManager:
                     result_paths=result_paths,
                     error="" if result_paths else f"Job exceeded timeout of {self.settings.job_timeout_seconds} seconds.",
                 )
-                self._refresh_batch(job["batch_id"])
+                self._refresh_batch(updated["batch_id"])
                 self.procs.pop(job_id, None)
                 self._pump_queue()
                 return
@@ -225,8 +235,9 @@ class JobManager:
                     self._resolve_result_paths(job, final_output),
                 )
                 succeeded = bool(result_paths)
-                self.store.update_job(
+                updated = self.store.update_job_if_status(
                     job_id,
+                    {"running"},
                     status="succeeded" if succeeded else "failed",
                     stage="finished" if succeeded else "failed",
                     finished_at=now_iso(),
@@ -235,7 +246,7 @@ class JobManager:
                     result_paths=result_paths,
                     error="" if succeeded else job.get("error", "") or "No generated image was detected.",
                 )
-                self._refresh_batch(job["batch_id"])
+                self._refresh_batch(updated["batch_id"])
                 self.procs.pop(job_id, None)
                 self._pump_queue()
                 return
@@ -245,7 +256,23 @@ class JobManager:
         result_paths = extract_result_paths(output)
         if result_paths:
             return result_paths
+        session_paths = self._discover_session_images(output)
+        if session_paths:
+            return session_paths
         return self._discover_generated_images(job)
+
+    def _discover_session_images(self, output: str) -> list[str]:
+        match = SESSION_ID_RE.search(output)
+        if not match:
+            return []
+        session_dir = self.settings.generated_images_dir / match.group(1)
+        if not session_dir.exists() or not session_dir.is_dir():
+            return []
+        paths: list[str] = []
+        for path in sorted(session_dir.iterdir(), key=lambda item: item.stat().st_mtime):
+            if path.is_file() and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}:
+                paths.append(str(path))
+        return paths
 
     def _discover_generated_images(self, job: Dict[str, Any]) -> list[str]:
         root = self.settings.generated_images_dir
@@ -398,10 +425,17 @@ class JobManager:
                     continue
                 if (now - started).total_seconds() <= self.settings.job_timeout_seconds + 30:
                     continue
+                proc = self.procs.pop(job["job_id"], None)
+                if proc is not None:
+                    self._terminate_proc(proc)
+                worker_pid = job.get("worker_pid")
+                if worker_pid:
+                    self._kill_process_tree(int(worker_pid))
                 final_output = self._safe_read(job.get("log_path", ""))
                 result_paths = self._archive_results(job, extract_result_paths(final_output))
-                self.store.update_job(
+                self.store.update_job_if_status(
                     job["job_id"],
+                    {"running"},
                     status="succeeded" if result_paths else "failed",
                     stage="finished" if result_paths else "timeout",
                     finished_at=now_iso(),

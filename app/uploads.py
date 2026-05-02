@@ -20,6 +20,7 @@ EXTENSIONS = {
     "image/webp": ".webp",
     "image/gif": ".gif",
 }
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 def create_upload(request: dict[str, Any], settings: Settings, store: StateStore) -> dict[str, Any]:
@@ -38,12 +39,16 @@ def create_upload(request: dict[str, Any], settings: Settings, store: StateStore
     if mime_type not in EXTENSIONS:
         raise ValueError(f"unsupported image mime type: {mime_type}")
 
+    if len(encoded) > ((MAX_UPLOAD_BYTES + 2) // 3) * 4 + 1024:
+        raise ValueError(f"uploaded image is larger than {MAX_UPLOAD_BYTES} bytes")
     try:
         content = base64.b64decode(encoded, validate=True)
     except binascii.Error as exc:
         raise ValueError("invalid base64 image data") from exc
     if not content:
         raise ValueError("uploaded image is empty")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise ValueError(f"uploaded image is larger than {MAX_UPLOAD_BYTES} bytes")
 
     image_id = new_id("img")
     filename = safe_filename(request.get("filename"), image_id, EXTENSIONS[mime_type])

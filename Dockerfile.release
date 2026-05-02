@@ -37,7 +37,7 @@ ENV PYTHONUNBUFFERED=1 \
     IMAGE_GEN_FRONTEND_DIST_DIR=${APP_HOME}/frontend/dist \
     IMAGE_GEN_FILE_ROOTS=${APP_DATA_DIR}:${APP_WORKDIR}:${CODEX_HOME}/generated_images \
     IMAGE_GEN_JOB_TIMEOUT_SECONDS=1800 \
-    IMAGE_GEN_MAX_CONCURRENCY=8 \
+    IMAGE_GEN_MAX_CONCURRENCY=50 \
     IMAGE_GEN_CORS_ORIGIN=* \
     APP_USER=${APP_USER} \
     APP_GROUP=${APP_USER}
@@ -53,7 +53,7 @@ WORKDIR ${APP_HOME}
 COPY --chown=${APP_USER}:${APP_USER} app ./app
 COPY --chown=${APP_USER}:${APP_USER} tests ./tests
 COPY --chown=${APP_USER}:${APP_USER} scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY --chown=${APP_USER}:${APP_USER} README.md HANDOFF.md pyproject.toml ./
+COPY --chown=${APP_USER}:${APP_USER} pyproject.toml ./
 COPY --chown=${APP_USER}:${APP_USER} --from=frontend-builder /build/frontend/dist ./frontend/dist
 COPY release-context/codex-bin/codex ${CODEX_BIN_PATH}
 COPY release-context/codex-runtime ${CODEX_RUNTIME_DIR}

@@ -2,7 +2,7 @@
 
 This document is for AI coding agents or automation agents that need to deploy Image Gen Service with Docker for a user.
 
-The goal is to deploy the published Docker image, preserve user data in mounted folders, complete Codex login, verify service health, and avoid leaking credentials or generated content.
+The goal is to deploy the published Docker image, preserve user data in mounted folders, complete Codex login, verify service health, and avoid leaking credentials, local development files, documentation-only files, runtime state, or generated content.
 
 ## Agent Goal
 
@@ -15,14 +15,16 @@ Deploy a working Image Gen Service instance:
 - Generated images stored in a mounted `images` directory at `/data/codex-home/generated_images`
 - Health endpoint verified
 - User given the final URL and Codex login instructions
+- Published image contents kept separate from user runtime data and local-only development work
 
 ## Safety Rules
 
 Follow these rules before running commands:
 
 - Do not use `docker commit` to publish or preserve this app.
-- Do not copy a user's existing `/root/.codex`, `.codex`, generated images, uploads, logs, or `data/` into a public image.
-- Do not print DockerHub tokens, GitHub tokens, or Codex auth files.
+- Do not copy a user's existing `/root/.codex`, `.codex`, generated images, uploads, logs, `.env` files, `runtime/`, or `data/` into a public image.
+- Do not print DockerHub tokens, GitHub tokens, sudo passwords, or Codex auth files.
+- Do not publish local `mcp/` development work or documentation-only files into the release image.
 - Prefer mounted runtime folders over data stored inside the container.
 - Do not expose this service directly to the public internet. Use a trusted reverse proxy, VPN, or external access control for remote use.
 
@@ -34,7 +36,7 @@ Ask or infer these values:
 | --- | --- | --- |
 | Deploy directory | `./image-gen-service` | Host folder that will contain runtime data. |
 | Host port | `8088` | Change if occupied. |
-| Max concurrency | `8` | Use `1` on low-resource machines or quota-limited accounts. |
+| Max concurrency | `50` | The published image defaults to 50, matching the UI maximum. Use `1-2` on low-resource machines or quota-limited accounts. |
 | Docker Compose available | auto-detect | Prefer compose when available. |
 
 ## Preflight Checks
@@ -81,7 +83,7 @@ services:
     ports:
       - "${IMAGE_GEN_HOST_PORT:-8088}:8088"
     environment:
-      IMAGE_GEN_MAX_CONCURRENCY: "${IMAGE_GEN_MAX_CONCURRENCY:-8}"
+      IMAGE_GEN_MAX_CONCURRENCY: "${IMAGE_GEN_MAX_CONCURRENCY:-50}"
       IMAGE_GEN_CORS_ORIGIN: "${IMAGE_GEN_CORS_ORIGIN:-*}"
     volumes:
       - ./runtime/data:/data/image-gen-service
@@ -95,7 +97,7 @@ Create `image-gen-service/.env`:
 
 ```env
 IMAGE_GEN_HOST_PORT=8088
-IMAGE_GEN_MAX_CONCURRENCY=8
+IMAGE_GEN_MAX_CONCURRENCY=50
 IMAGE_GEN_CORS_ORIGIN=*
 ```
 
@@ -119,7 +121,7 @@ mkdir -p image-gen-service/runtime/data \
 docker run -d \
   --name image-gen-service \
   -p 8088:8088 \
-  -e IMAGE_GEN_MAX_CONCURRENCY="8" \
+  -e IMAGE_GEN_MAX_CONCURRENCY="50" \
   -v "$PWD/image-gen-service/runtime/data:/data/image-gen-service" \
   -v "$PWD/image-gen-service/runtime/workspace:/workspace" \
   -v "$PWD/image-gen-service/runtime/codex-home:/data/codex-home" \
@@ -162,7 +164,7 @@ Expected healthy shape:
     "available": true,
     "authenticated": true,
     "auth_path": "/data/codex-home/auth.json",
-    "max_concurrency": 8
+    "max_concurrency": 50
   }
 }
 ```
@@ -310,4 +312,4 @@ export CODEX_RUNTIME=/path/to/codex/runtime
 ./scripts/build_release_image.sh image-gen-service:release
 ```
 
-Do not publish images made from a running user container.
+Do not publish images made from a running user container. The release build context must exclude docs, local `.env` files, runtime folders, Codex auth material, uploaded/generated images, and local `mcp/` development work.

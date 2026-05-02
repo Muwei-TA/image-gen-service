@@ -2,9 +2,9 @@
 
 [English README](README.md) | [AI 智能体部署文档](README_FOR_AGENT.md)
 
-Image Gen Service 是一个基于 Codex CLI 的浏览器批量生图工作台。它支持输入提示词、选择比例、批量生成、上传参考图、多图参考、并行任务、取消任务、复用生成图作为参考图，以及下载整批结果。
+Image Gen Service 是一个基于 Codex CLI 的浏览器批量生图工作台。它支持输入提示词、选择比例、批量生成、上传参考图、多图参考、并行任务、点击预览、可选暗黑模式、取消任务、复用生成图作为参考图，以及下载整批结果。
 
-这个项目主要以 Docker 服务方式运行。Codex 登录信息、提示词、上传图、日志、生成图都会保存在宿主机挂载目录里，不会写进公开发布的 Docker 镜像。
+推荐镜像是 `muwei517/image-gen-service:latest`。这个项目主要以 Docker 服务方式运行。Codex 登录信息、提示词、上传图、日志、生成图都会保存在宿主机挂载目录里，不会写进公开发布的 Docker 镜像。
 
 当前公开镜像不需要服务 API token。如果接口返回 `unauthorized`，通常是旧容器、旧镜像、反向代理鉴权或浏览器访问到了旧服务。
 
@@ -12,16 +12,18 @@ Image Gen Service 是一个基于 Codex CLI 的浏览器批量生图工作台。
 
 ## 功能
 
-- Web UI 生图工作台。
-- 每张图对应一个独立 Codex 任务。
+- 商业化风格的 Web UI 生图工作台。
+- 每张图对应一个独立 Codex 任务，最多运行到配置的并发上限。
 - 支持比例和数量控制，UI 单批支持 `1-50` 张。
+- 支持可选暗黑模式。
+- 支持点击放大预览生成图。
 - 支持上传参考图。
 - 支持多张参考图。
 - 支持把生成图再次作为参考图。
 - 支持任务队列、运行中、完成、失败、取消状态。
 - 支持取消单个任务或整批任务。
 - 支持批量下载 zip。
-- 公开 Docker 镜像不包含 Codex 凭证、用户历史、上传图或生成图。
+- 公开 Docker 镜像不包含 Codex 凭证、运行数据、生成图、文档或本地 MCP 开发内容。
 
 ## 快速开始
 
@@ -68,7 +70,7 @@ services:
     ports:
       - "8088:8088"
     environment:
-      IMAGE_GEN_MAX_CONCURRENCY: "8"
+      IMAGE_GEN_MAX_CONCURRENCY: "50"
       IMAGE_GEN_CORS_ORIGIN: "*"
     volumes:
       - ./runtime/data:/data/image-gen-service
@@ -99,7 +101,7 @@ docker exec -it --user imagegen image-gen-service codex
 
 UI 会把选择的比例追加到提示词后，例如 `--ar 16:9`。如果选择了参考图，后端会用 `codex exec` 运行任务，并把参考图作为 `--image` 参数传给 Codex。
 
-生成数量和并发不是一回事。单批可以提交多张图，`IMAGE_GEN_MAX_CONCURRENCY` 只控制同时运行的 Codex 任务数量。默认并发是 `8`，机器资源或账号额度有限时可以调低。
+公开镜像默认设置 `IMAGE_GEN_MAX_CONCURRENCY=50`，与 UI 的单批最大数量一致。如果调低这个值，较大的批次会排队，并且只运行到配置的并发上限。
 
 ## 挂载目录
 
@@ -118,7 +120,7 @@ UI 会把选择的比例追加到提示词后，例如 `--ar 16:9`。如果选�
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `IMAGE_GEN_MAX_CONCURRENCY` | `8` | 同时运行的 Codex 任务数量。资源或额度有限时建议设为 `1-2`。 |
+| `IMAGE_GEN_MAX_CONCURRENCY` | `50` | 同时运行的 Codex 任务数量。公开镜像默认 50，因此 50 张批次可在主机资源和账号额度允许时完全并行。资源或额度有限时可以调低。 |
 | `IMAGE_GEN_JOB_TIMEOUT_SECONDS` | `1800` | 单个任务超时时间。 |
 | `IMAGE_GEN_CORS_ORIGIN` | `*` | CORS 来源。公网或反代部署时建议限制。 |
 | `IMAGE_GEN_PORT` | `8088` | 容器内端口，通常不用改，宿主机端口通过 Docker 映射。 |
@@ -155,6 +157,10 @@ docker run -d \
 - 上传的参考图
 - 生成图片
 - 任务日志和历史提示词
+- 本地 `.env` 文件
+- 本地 `runtime/` 目录
+- 本地 `mcp/` 开发内容
+- 项目文档文件
 
 这些内容存在宿主机挂载目录里。不要把运行目录打进镜像，也不要公开分享运行目录。
 
@@ -196,7 +202,7 @@ curl -X POST http://localhost:8088/batches \
   -d '{
     "prompt": "Create a cinematic product image --ar 16:9",
     "count": 4,
-    "reference_image_ids": ["upload_id_1", "upload_id_2"]
+    "reference_image_ids": ["img_example1", "img_example2"]
   }'
 ```
 

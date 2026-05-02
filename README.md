@@ -1,6 +1,6 @@
 # Image Gen Service
 
-[中文文档](README.zh-CN.md)
+[中文文档](README.zh-CN.md) | [Agent deployment guide](README_FOR_AGENT.md)
 
 Image Gen Service is a browser-based batch image generation workspace powered by Codex CLI. It lets you enter prompts, choose aspect ratios and image counts, upload reference images, watch jobs run in parallel, preview generated images, reuse results as references, cancel stuck jobs, and download generated results.
 

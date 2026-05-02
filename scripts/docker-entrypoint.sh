@@ -25,6 +25,11 @@ if [ ! -e "${CODEX_USER_HOME}/.codex/generated_images" ]; then
   ln -sfn "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}/.codex/generated_images"
 fi
 
+mkdir -p "${CODEX_USER_HOME}/.claude"
+if [ ! -f "${CODEX_USER_HOME}/.claude/settings.json" ]; then
+  printf '{"model": "gpt-5.4-mini"}\n' > "${CODEX_USER_HOME}/.claude/settings.json"
+fi
+
 if [ ! -f "${DATA_DIR}/state.json" ]; then
   printf '{"batches": {}, "jobs": {}, "uploads": {}}\n' > "${DATA_DIR}/state.json"
 fi

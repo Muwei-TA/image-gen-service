@@ -1,6 +1,6 @@
 services:
   image-gen:
-    image: ${IMAGE_GEN_IMAGE:-image-gen-service:release}
+    image: muwei517/image-gen-service:latest
     container_name: ${IMAGE_GEN_CONTAINER_NAME:-image-gen-service}
     user: "root"
     ports:

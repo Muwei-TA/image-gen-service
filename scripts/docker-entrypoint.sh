@@ -34,22 +34,6 @@ if [ ! -f "${DATA_DIR}/state.json" ]; then
   printf '{"batches": {}, "jobs": {}, "uploads": {}}\n' > "${DATA_DIR}/state.json"
 fi
 
-if [ "$(id -u)" = "0" ]; then
-  for path in "${DATA_DIR}" "${WORKDIR_PATH}" "${CODEX_HOME_PATH}" "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}"; do
-    chown -R "${APP_USER}:${APP_GROUP}" "${path}" 2>/dev/null || chmod -R ugo+rwX "${path}" 2>/dev/null || true
-    find "${path}" -type f -exec chmod ugo+rw {} \; 2>/dev/null || true
-  done
-
-  for path in "${DATA_DIR}" "${DATA_DIR}/jobs" "${DATA_DIR}/uploads" "${WORKDIR_PATH}" "${CODEX_HOME_PATH}" "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}"; do
-    if ! gosu "${APP_USER}:${APP_GROUP}" sh -c "test -w \"\$1\"" sh "${path}"; then
-      echo "image-gen-service: ${path} is not writable by ${APP_USER}. Falling back to root user to avoid permission issues." >&2
-      umask 000
-      exec "$@"
-    fi
-  done
-
-  umask 000
-  exec gosu "${APP_USER}:${APP_GROUP}" "$@"
-fi
-
+# Force run as root and set umask
+umask 000
 exec "$@"

@@ -1,18 +1,8 @@
 services:
   image-gen:
-    build:
-      context: .
-      dockerfile: Dockerfile.release
-      args:
-        APP_HOME: ${APP_HOME:-/opt/image-gen-service}
-        APP_DATA_DIR: ${APP_DATA_DIR:-/data/image-gen-service}
-        APP_WORKDIR: ${APP_WORKDIR:-/workspace}
-        CODEX_HOME: ${CODEX_HOME:-/data/codex-home}
-        CODEX_BIN_PATH: ${CODEX_BIN_PATH:-/usr/local/bin/codex}
-        CODEX_RUNTIME_DIR: ${CODEX_RUNTIME_DIR:-/opt/codex-runtime}
-        VITE_IMAGE_GEN_DEFAULT_WORKDIR: ${VITE_IMAGE_GEN_DEFAULT_WORKDIR:-/workspace}
     image: ${IMAGE_GEN_IMAGE:-image-gen-service:release}
     container_name: ${IMAGE_GEN_CONTAINER_NAME:-image-gen-service}
+    user: "root"
     ports:
       - "${IMAGE_GEN_PORT:-8088}:8088"
     environment:
@@ -25,6 +15,8 @@ services:
       IMAGE_GEN_CODEX_HOME: ${CODEX_HOME:-/data/codex-home}
       IMAGE_GEN_CODEX_USER_HOME: /home/imagegen
       IMAGE_GEN_GENERATED_IMAGES_DIR: ${CODEX_HOME:-/data/codex-home}/generated_images
+      APP_USER: ${UID:-1000}
+      APP_GROUP: ${GID:-1000}
       IMAGE_GEN_FRONTEND_DIST_DIR: ${APP_HOME:-/opt/image-gen-service}/frontend/dist
       IMAGE_GEN_FILE_ROOTS: ${APP_DATA_DIR:-/data/image-gen-service}:${APP_WORKDIR:-/workspace}:${CODEX_HOME:-/data/codex-home}/generated_images
       IMAGE_GEN_JOB_TIMEOUT_SECONDS: ${IMAGE_GEN_JOB_TIMEOUT_SECONDS:-1800}

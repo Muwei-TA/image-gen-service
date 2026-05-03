@@ -15,18 +15,18 @@ mkdir -p \
   "${WORKDIR_PATH}" \
   "${CODEX_HOME_PATH}" \
   "${GENERATED_IMAGES_DIR}" \
-  "${CODEX_USER_HOME}/.codex"
+  "${CODEX_USER_HOME}/.codex" || true
 
-mkdir -p /root/.codex
-if [ ! -e /root/.codex/generated_images ]; then
-  ln -sfn "${GENERATED_IMAGES_DIR}" /root/.codex/generated_images
+mkdir -p /root/.codex || true
+if [ -d /root/.codex ] && [ ! -e /root/.codex/generated_images ]; then
+  ln -sfn "${GENERATED_IMAGES_DIR}" /root/.codex/generated_images || true
 fi
 if [ ! -e "${CODEX_USER_HOME}/.codex/generated_images" ]; then
   ln -sfn "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}/.codex/generated_images"
 fi
 
-mkdir -p "${CODEX_USER_HOME}/.claude"
-if [ ! -f "${CODEX_USER_HOME}/.claude/settings.json" ]; then
+mkdir -p "${CODEX_USER_HOME}/.claude" || true
+if [ -d "${CODEX_USER_HOME}/.claude" ] && [ ! -f "${CODEX_USER_HOME}/.claude/settings.json" ]; then
   printf '{"model": "gpt-5.4-mini"}\n' > "${CODEX_USER_HOME}/.claude/settings.json"
 fi
 

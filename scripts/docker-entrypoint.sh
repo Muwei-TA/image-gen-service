@@ -37,6 +37,7 @@ fi
 if [ "$(id -u)" = "0" ]; then
   for path in "${DATA_DIR}" "${WORKDIR_PATH}" "${CODEX_HOME_PATH}" "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}"; do
     chown -R "${APP_USER}:${APP_GROUP}" "${path}" 2>/dev/null || chmod -R ugo+rwX "${path}" 2>/dev/null || true
+    find "${path}" -type f -exec chmod ugo+rw {} \; 2>/dev/null || true
   done
 
   for path in "${DATA_DIR}" "${DATA_DIR}/jobs" "${DATA_DIR}/uploads" "${WORKDIR_PATH}" "${CODEX_HOME_PATH}" "${GENERATED_IMAGES_DIR}" "${CODEX_USER_HOME}"; do

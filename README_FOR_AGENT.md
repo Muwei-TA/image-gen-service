@@ -28,6 +28,19 @@ Follow these rules before running commands:
 - Prefer mounted runtime folders over data stored inside the container.
 - Do not expose this service directly to the public internet. Use a trusted reverse proxy, VPN, or external access control for remote use.
 
+## MCP Server
+
+This repo includes a Streamable HTTP MCP server in `mcp/`. The root `docker-compose.yml` starts both the backend and the MCP adapter. The MCP container depends on the backend container being healthy before starting.
+
+MCP endpoints:
+
+- `POST http://localhost:18089/mcp` - MCP Streamable HTTP
+- `GET http://localhost:18089/health` - MCP health check
+
+Key MCP tool: `imagegen` - synchronously generates images and returns MCP ImageContent.
+
+See `mcp/README.md` for standalone deployment and full tool list.
+
 ## Inputs To Collect
 
 Ask or infer these values:

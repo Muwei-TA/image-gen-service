@@ -140,6 +140,42 @@ Advanced variables:
 | `IMAGE_GEN_FRONTEND_DIST_DIR` | `/opt/image-gen-service/frontend/dist` | Built frontend directory. |
 | `IMAGE_GEN_BATCH_PREFIX` | `$imagegen` | Prefix sent to Codex for each image job. |
 
+## MCP Server
+
+This project includes a Streamable HTTP MCP server (`mcp/`) that wraps the backend HTTP API into MCP tools, allowing AI clients like Claude to generate images directly.
+
+### Quick Start with Docker Compose
+
+The root `docker-compose.yml` includes both services. The MCP container automatically connects to the backend via the container network:
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+Endpoints after startup:
+
+| Service | URL | Description |
+| --- | --- | --- |
+| Backend + Web UI | `http://localhost:8088` | Image generation service |
+| MCP adapter | `http://localhost:18089/mcp` | MCP Streamable HTTP endpoint |
+| MCP health | `http://localhost:18089/health` | MCP + backend health check |
+
+### MCP Tools
+
+| Tool | Description |
+| --- | --- |
+| `imagegen` | Synchronous image generation, returns MCP ImageContent |
+| `health_check` | Check backend and Codex auth status |
+| `create_batch` | Create async batch |
+| `get_batch` | Get batch state |
+| `get_job` | Get job state |
+| `list_batches` | List recent batches |
+| `upload_reference_image` | Upload base64 reference image |
+| `list_uploads` | List uploaded reference images |
+
+See `mcp/README.md` for full configuration and standalone usage.
+
 ## Updating
 
 Pull the latest image and restart:

@@ -27,3 +27,8 @@ frontend/frontend_patch*.zip
 codex-home/
 generated_images/
 uploads/
+
+# MCP
+mcp/.venv/
+mcp/__pycache__/
+mcp/*.pyc

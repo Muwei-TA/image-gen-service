@@ -127,6 +127,42 @@ UI 会把选择的比例追加到提示词后，例如 `--ar 16:9`。如果选�
 | `IMAGE_GEN_GENERATED_IMAGES_DIR` | `/data/codex-home/generated_images` | Codex 生成图片目录。 |
 | `IMAGE_GEN_FILE_ROOTS` | data、workspace、generated images | `/files` 允许读取的路径根目录。 |
 
+## MCP 服务
+
+本项目内置 Streamable HTTP MCP 服务（`mcp/`），将后端 HTTP API 包装为 MCP 工具，支持 AI 客户端（如 Claude）直接生图。
+
+### Docker Compose 一键启动
+
+根目录 `docker-compose.yml` 已包含两个服务，MCP 容器通过容器网络自动连接后端：
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+启动后的端点：
+
+| 服务 | 地址 | 说明 |
+| --- | --- | --- |
+| 后端 + Web UI | `http://localhost:8088` | 生图服务 |
+| MCP 适配层 | `http://localhost:18089/mcp` | MCP Streamable HTTP 端点 |
+| MCP 健康检查 | `http://localhost:18089/health` | MCP + 后端健康状态 |
+
+### MCP 工具
+
+| 工具 | 说明 |
+| --- | --- |
+| `imagegen` | 同步生图，返回 MCP ImageContent |
+| `health_check` | 检查后端和 Codex 认证状态 |
+| `create_batch` | 创建异步批次 |
+| `get_batch` | 查询批次状态 |
+| `get_job` | 查询任务状态 |
+| `list_batches` | 列出最近批次 |
+| `upload_reference_image` | 上传 base64 参考图 |
+| `list_uploads` | 列出已上传参考图 |
+
+完整配置和独立使用方式见 `mcp/README.md`。
+
 ## 更新镜像
 
 ```bash

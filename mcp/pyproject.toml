@@ -1,20 +1,23 @@
 [project]
 name = "image-gen-service-mcp"
 version = "0.1.0"
-description = "MCP wrapper for image-gen-service HTTP API"
-requires-python = ">=3.10"
+description = "Streamable HTTP MCP server for image-gen-service"
+requires-python = ">=3.11"
 dependencies = [
-  "httpx>=0.27.0",
-  "mcp>=1.9.0",
-  "pydantic>=2.0.0",
+  "httpx==0.28.1",
+  "mcp==1.28.1",
+  "pydantic==2.12.5",
 ]
 
 [project.scripts]
 image-gen-service-mcp = "image_gen_mcp.server:main"
 
+[build-system]
+requires = ["hatchling==1.28.0"]
+build-backend = "hatchling.build"
+
 [tool.hatch.build.targets.wheel]
 packages = ["image_gen_mcp"]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.pytest.ini_options]
+testpaths = ["tests"]

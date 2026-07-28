@@ -1,5 +1,9 @@
 FROM python:3.12.11-slim-bookworm
 
+LABEL org.opencontainers.image.source="https://github.com/Muwei-TA/image-gen-service" \
+      org.opencontainers.image.title="image-gen-service-mcp" \
+      org.opencontainers.image.description="Streamable HTTP MCP adapter for Image Gen Service"
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1

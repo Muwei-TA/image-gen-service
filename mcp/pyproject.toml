@@ -1,6 +1,6 @@
 [project]
 name = "image-gen-service-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Streamable HTTP MCP server for image-gen-service"
 requires-python = ">=3.11"
 dependencies = [

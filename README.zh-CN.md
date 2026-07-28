@@ -147,21 +147,27 @@ docker compose up -d
 | 后端 + Web UI | `http://localhost:8088` | 生图服务 |
 | MCP 适配层 | `http://localhost:18089/mcp` | MCP Streamable HTTP 端点 |
 | MCP 健康检查 | `http://localhost:18089/health` | MCP + 后端健康状态 |
+| MCP 图片下载 | `http://localhost:18089/media/{token}` | 短期有效的生成图片地址 |
 
 ### MCP 工具
 
 | 工具 | 说明 |
 | --- | --- |
-| `imagegen` | 同步生图，返回 MCP ImageContent |
+| `imagegen` | 同步生图，返回 ImageContent 和可选媒体 URL |
 | `health_check` | 检查后端和 Codex 认证状态 |
 | `create_batch` | 创建异步批次 |
 | `get_batch` | 查询批次状态 |
 | `get_job` | 查询任务状态 |
+| `get_batch_images` | 将已完成批次发布为短期媒体 URL |
 | `list_batches` | 列出最近批次 |
 | `upload_reference_image` | 上传 base64 参考图 |
 | `list_uploads` | 列出已上传参考图 |
 
 完整配置和独立使用方式见 `mcp/README.md`。
+
+飞书、QQ 等隔离环境需要把 `IMAGE_GEN_MCP_MEDIA_BASE_URL` 配置成 Agent
+运行环境可访问的地址。MCP 会同时返回 `resource_link`、`structuredContent`
+和 `MEDIA:<url>` 兼容字段，不暴露后端容器路径。
 
 ## 更新镜像
 

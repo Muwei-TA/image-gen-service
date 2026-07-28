@@ -160,21 +160,28 @@ Endpoints after startup:
 | Backend + Web UI | `http://localhost:8088` | Image generation service |
 | MCP adapter | `http://localhost:18089/mcp` | MCP Streamable HTTP endpoint |
 | MCP health | `http://localhost:18089/health` | MCP + backend health check |
+| MCP media | `http://localhost:18089/media/{token}` | Short-lived generated image download |
 
 ### MCP Tools
 
 | Tool | Description |
 | --- | --- |
-| `imagegen` | Synchronous image generation, returns MCP ImageContent |
+| `imagegen` | Synchronous generation with ImageContent and optional media URL |
 | `health_check` | Check backend and Codex auth status |
 | `create_batch` | Create async batch |
 | `get_batch` | Get batch state |
 | `get_job` | Get job state |
+| `get_batch_images` | Publish completed batch images as expiring media URLs |
 | `list_batches` | List recent batches |
 | `upload_reference_image` | Upload base64 reference image |
 | `list_uploads` | List uploaded reference images |
 
 See `mcp/README.md` for full configuration and standalone usage.
+
+For Feishu, QQ, or other isolated Agent channels, configure
+`IMAGE_GEN_MCP_MEDIA_BASE_URL` to an address reachable from the Agent runtime.
+The MCP result includes `resource_link`, `structuredContent`, and `MEDIA:<url>`
+fallbacks without exposing backend container paths.
 
 ## Updating
 

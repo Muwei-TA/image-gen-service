@@ -1,6 +1,14 @@
 .git
 .env
 .venv
+.DS_Store
+**/.DS_Store
+._*
+**/._*
 __pycache__
+**/__pycache__
+*.pyc
 .pytest_cache
 tests
+runtime
+generated_images

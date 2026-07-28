@@ -36,8 +36,12 @@ MCP endpoints:
 
 - `POST http://localhost:18089/mcp` - MCP Streamable HTTP
 - `GET http://localhost:18089/health` - MCP health check
+- `GET http://localhost:18089/media/{token}` - short-lived generated image download
 
-Key MCP tool: `imagegen` - synchronously generates images and returns MCP ImageContent.
+Key MCP tool: `imagegen` - synchronously generates images and returns MCP
+ImageContent plus optional channel-safe media URLs. Set
+`IMAGE_GEN_MCP_MEDIA_BASE_URL` to an address reachable from the Agent runtime;
+use `get_batch_images` for completed asynchronous batches.
 
 See `mcp/README.md` for standalone deployment and full tool list.
 

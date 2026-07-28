@@ -6,14 +6,16 @@ Streamable HTTP MCP server that wraps the `image-gen-service` HTTP API into MCP 
 
 - `POST /mcp` - Streamable HTTP MCP
 - `GET /health` - Service and backend Codex auth status
+- `GET /media/{token}` - Short-lived generated image download
 
 ## Default tools
 
-- `imagegen` - Synchronous image generation, returns MCP ImageContent directly
+- `imagegen` - Synchronous generation with inline ImageContent and optional channel-safe media URLs
 - `health_check` - Check backend availability and Codex authentication
 - `create_batch` - Create an asynchronous image generation batch
 - `get_batch` - Get batch state and safe result metadata
 - `get_job` - Get a single job state and safe result metadata
+- `get_batch_images` - Publish completed batch images as short-lived HTTP URLs
 - `list_batches` - List recent batches, optionally filtered by status
 - `upload_reference_image` - Upload a base64/data-URL reference image
 - `list_uploads` - List uploaded reference images
@@ -25,6 +27,30 @@ IMAGE_GEN_MCP_ENABLE_CANCEL_TOOLS=true
 ```
 
 This adds `cancel_batch` and `cancel_job`.
+
+## Channel media delivery
+
+Set `IMAGE_GEN_MCP_MEDIA_BASE_URL` to an MCP service root URL that the Agent
+runtime can reach:
+
+```env
+IMAGE_GEN_MCP_MEDIA_BASE_URL=http://image-gen-mcp:8090
+IMAGE_GEN_MCP_MEDIA_TTL_SECONDS=3600
+```
+
+When enabled, `imagegen` keeps the standard inline MCP image and also returns:
+
+- a standard MCP `resource_link`;
+- `structuredContent.images[].url`;
+- a `MEDIA:<url>` text fallback for chat-channel adapters.
+
+After an asynchronous `create_batch`, call `get_batch_images(batch_id)` for the
+same URL-only delivery format. Some MCP gateways may drop `structuredContent`;
+the `resource_link` and `MEDIA:<url>` carry the same URL.
+
+URLs use 256-bit random capability tokens, expire after one hour by default,
+and never expose backend paths. The in-memory cache defaults to 100 images and
+200 MiB; restarting the MCP container invalidates all URLs.
 
 ## Local run
 
@@ -78,6 +104,10 @@ auto_start = true
 | `IMAGE_GEN_MCP_MAX_UPLOAD_BYTES` | `10485760` | Max upload size |
 | `IMAGE_GEN_MCP_MAX_INLINE_IMAGES` | `8` | Max inline images for `imagegen` |
 | `IMAGE_GEN_MCP_MAX_INLINE_IMAGE_BYTES` | `20971520` | Max inline image download size |
+| `IMAGE_GEN_MCP_MEDIA_BASE_URL` | empty | Agent-reachable MCP root URL; enables media delivery |
+| `IMAGE_GEN_MCP_MEDIA_TTL_SECONDS` | `3600` | Media URL lifetime |
+| `IMAGE_GEN_MCP_MEDIA_MAX_ITEMS` | `100` | Max cached media items |
+| `IMAGE_GEN_MCP_MEDIA_MAX_TOTAL_BYTES` | `209715200` | Max media cache bytes |
 | `IMAGE_GEN_MCP_REDACT_PATHS` | `true` | Redact filesystem paths in responses |
 | `IMAGE_GEN_MCP_ENABLE_CANCEL_TOOLS` | `false` | Enable cancel tools |
 

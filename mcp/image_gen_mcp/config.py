@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+from urllib.parse import urlsplit
 
 
 def _bool_env(name: str, default: bool) -> bool:
@@ -21,6 +22,18 @@ def _int_env(name: str, default: int, minimum: int = 1) -> int:
     return value
 
 
+def _optional_http_url(name: str) -> str | None:
+    value = os.environ.get(name, "").strip().rstrip("/")
+    if not value:
+        return None
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(f"{name} must be an absolute http(s) URL")
+    if parsed.query or parsed.fragment:
+        raise ValueError(f"{name} must not contain a query or fragment")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     base_url: str
@@ -36,6 +49,10 @@ class Settings:
     max_upload_bytes: int
     max_inline_images: int
     max_inline_image_bytes: int
+    media_base_url: str | None
+    media_ttl_seconds: int
+    media_max_items: int
+    media_max_total_bytes: int
     redact_paths: bool
     enable_cancel_tools: bool
 
@@ -61,6 +78,10 @@ class Settings:
             max_upload_bytes=_int_env("IMAGE_GEN_MCP_MAX_UPLOAD_BYTES", 10 * 1024 * 1024),
             max_inline_images=_int_env("IMAGE_GEN_MCP_MAX_INLINE_IMAGES", 8),
             max_inline_image_bytes=_int_env("IMAGE_GEN_MCP_MAX_INLINE_IMAGE_BYTES", 20 * 1024 * 1024),
+            media_base_url=_optional_http_url("IMAGE_GEN_MCP_MEDIA_BASE_URL"),
+            media_ttl_seconds=_int_env("IMAGE_GEN_MCP_MEDIA_TTL_SECONDS", 3600),
+            media_max_items=_int_env("IMAGE_GEN_MCP_MEDIA_MAX_ITEMS", 100),
+            media_max_total_bytes=_int_env("IMAGE_GEN_MCP_MEDIA_MAX_TOTAL_BYTES", 200 * 1024 * 1024),
             redact_paths=_bool_env("IMAGE_GEN_MCP_REDACT_PATHS", True),
             enable_cancel_tools=_bool_env("IMAGE_GEN_MCP_ENABLE_CANCEL_TOOLS", False),
         )

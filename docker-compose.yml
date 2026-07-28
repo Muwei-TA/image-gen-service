@@ -39,7 +39,7 @@ services:
     build:
       context: ./mcp
       dockerfile: Dockerfile
-    image: image-gen-mcp:0.1.0
+    image: image-gen-mcp:0.2.0
     container_name: image-gen-mcp
     depends_on:
       image-gen:
@@ -53,6 +53,10 @@ services:
       IMAGE_GEN_MCP_PATH: /mcp
       IMAGE_GEN_MCP_GENERATION_TIMEOUT_SECONDS: ${IMAGE_GEN_MCP_GENERATION_TIMEOUT_SECONDS:-1800}
       IMAGE_GEN_MCP_MAX_INLINE_IMAGES: ${IMAGE_GEN_MCP_MAX_INLINE_IMAGES:-8}
+      IMAGE_GEN_MCP_MEDIA_BASE_URL: ${IMAGE_GEN_MCP_MEDIA_BASE_URL:-}
+      IMAGE_GEN_MCP_MEDIA_TTL_SECONDS: ${IMAGE_GEN_MCP_MEDIA_TTL_SECONDS:-3600}
+      IMAGE_GEN_MCP_MEDIA_MAX_ITEMS: ${IMAGE_GEN_MCP_MEDIA_MAX_ITEMS:-100}
+      IMAGE_GEN_MCP_MEDIA_MAX_TOTAL_BYTES: ${IMAGE_GEN_MCP_MEDIA_MAX_TOTAL_BYTES:-209715200}
       IMAGE_GEN_MCP_ENABLE_CANCEL_TOOLS: ${IMAGE_GEN_MCP_ENABLE_CANCEL_TOOLS:-false}
     restart: unless-stopped
     logging:

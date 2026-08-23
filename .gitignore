@@ -17,6 +17,10 @@ release-context/
 
 frontend/node_modules/
 frontend/dist/
+build/
+dist/
+release/
+release-context/
 frontend/frontend_patch*.zip
 
 *.log

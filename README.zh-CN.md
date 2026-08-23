@@ -33,6 +33,12 @@ cd image-gen-service
 
 也可以双击 `scripts\start-windows.cmd`。启动后打开 `http://127.0.0.1:8088`。
 
+### Windows 安装包
+
+GitHub Release 提供 x64 安装包。安装器内置应用所需的 Python 运行时、前端资源和官方 Codex CLI，不要求用户另外安装 Python、Node.js 或 Codex。应用安装到当前用户目录，运行数据保存在 `%LOCALAPPDATA%\ImageGenService`，Codex 登录凭据仍由 `%USERPROFILE%\.codex` 管理，不会写入安装包。
+
+安装包目前未进行代码签名，Windows SmartScreen 可能显示未知发布者警告。可使用 Release 中的 `SHA256SUMS.txt` 校验文件完整性。
+
 开发模式：
 
 ```powershell

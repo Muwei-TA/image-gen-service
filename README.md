@@ -27,6 +27,12 @@ scripts\start-windows.ps1
 
 Or double-click `scripts\start-windows.cmd`.
 
+### Windows installer
+
+GitHub Releases provide an x64 installer that bundles the Python runtime, built frontend, and official Codex CLI. It installs per-user without administrator privileges. Runtime data is stored under `%LOCALAPPDATA%\ImageGenService`, while Codex authentication remains in `%USERPROFILE%\.codex` and is never included in the installer.
+
+The installer is currently unsigned, so Windows SmartScreen may show an unknown-publisher warning. Verify downloads with the included `SHA256SUMS.txt`.
+
 macOS / Linux:
 
 ```bash

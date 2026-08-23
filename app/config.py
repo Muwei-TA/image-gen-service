@@ -1,8 +1,29 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import os
+from urllib.parse import urlsplit
+
+
+SUPPORTED_PROXY_SCHEMES = {"http", "https", "socks5", "socks5h"}
+
+
+def validate_proxy_url(value: str) -> str:
+    value = value.strip()
+    if not value:
+        return ""
+    parsed = urlsplit(value)
+    if parsed.scheme.lower() not in SUPPORTED_PROXY_SCHEMES:
+        supported = ", ".join(sorted(SUPPORTED_PROXY_SCHEMES))
+        raise ValueError(f"IMAGE_GEN_PROXY_URL must use one of: {supported}")
+    if not parsed.hostname:
+        raise ValueError("IMAGE_GEN_PROXY_URL must include a proxy host")
+    try:
+        parsed.port
+    except ValueError as exc:
+        raise ValueError("IMAGE_GEN_PROXY_URL contains an invalid port") from exc
+    return value
 
 
 @dataclass(frozen=True)
@@ -24,6 +45,8 @@ class Settings:
     file_roots: tuple[Path, ...]
     generated_images_dir: Path
     results_dir: Path
+    proxy_url: str = field(default="", repr=False)
+    proxy_no_proxy: str = "127.0.0.1,localhost,image-gen-service,image-gen-mcp"
 
     @classmethod
     def load(cls) -> "Settings":
@@ -57,7 +80,36 @@ class Settings:
             file_roots=file_roots,
             generated_images_dir=generated_images_dir,
             results_dir=results_dir,
+            proxy_url=validate_proxy_url(os.environ.get("IMAGE_GEN_PROXY_URL", "")),
+            proxy_no_proxy=os.environ.get(
+                "IMAGE_GEN_NO_PROXY",
+                "127.0.0.1,localhost,image-gen-service,image-gen-mcp",
+            ).strip(),
         )
+
+    def codex_env(self) -> dict[str, str]:
+        env = {
+            "HOME": str(self.codex_user_home),
+            "CODEX_HOME": str(self.codex_home),
+        }
+        if not self.proxy_url:
+            return env
+        for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+            env[key] = self.proxy_url
+        for key in ("NO_PROXY", "no_proxy"):
+            env[key] = self.proxy_no_proxy
+        return env
+
+    def proxy_status(self) -> dict[str, object]:
+        if not self.proxy_url:
+            return {"enabled": False}
+        parsed = urlsplit(self.proxy_url)
+        return {
+            "enabled": True,
+            "scheme": parsed.scheme.lower(),
+            "host": parsed.hostname,
+            "port": parsed.port,
+        }
 
     def ensure_dirs(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)

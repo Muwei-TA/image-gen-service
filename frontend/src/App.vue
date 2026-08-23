@@ -47,6 +47,11 @@ const platformLabel = computed(() => {
   if (platform.docker) return 'Docker'
   return platform.os === 'darwin' ? 'macOS 原生' : `${platform.os} 原生`
 })
+const proxyLabel = computed(() => {
+  const proxy = health.value?.codex.egress_proxy
+  if (!proxy?.enabled) return ''
+  return [proxy.scheme ? `${proxy.scheme}://` : '', proxy.host || '', proxy.port ? `:${proxy.port}` : ''].join('')
+})
 
 async function loadWorkspace() {
   try {
@@ -211,7 +216,7 @@ onBeforeUnmount(() => {
     <main class="workspace">
       <header class="topbar">
         <div><span class="eyebrow">创作空间</span><h1>让想法变成画面。</h1></div>
-        <div class="runtime-chip"><component :is="health?.platform.docker ? PhPackage : PhMonitor" :size="17" /><span>{{ platformLabel }}</span><i :class="{ active: health?.ok }" /></div>
+        <div class="runtime-chip" :title="proxyLabel ? `出口代理：${proxyLabel}` : '网络直连'"><component :is="health?.platform.docker ? PhPackage : PhMonitor" :size="17" /><span>{{ platformLabel }}{{ proxyLabel ? ' · 代理' : '' }}</span><i :class="{ active: health?.ok }" /></div>
       </header>
 
       <div v-if="error" class="error-banner"><PhWarningCircle :size="19" weight="fill" /><span>{{ error }}</span><button @click="error = ''"><PhX :size="17" /></button></div>

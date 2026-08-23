@@ -30,7 +30,7 @@ class CodexAuthManager:
 
     def _env(self) -> dict[str, str]:
         env = os.environ.copy()
-        env.update({"HOME": str(self.settings.codex_user_home), "CODEX_HOME": str(self.settings.codex_home)})
+        env.update(self.settings.codex_env())
         return env
 
     def _executable(self) -> str | None:
@@ -69,6 +69,7 @@ class CodexAuthManager:
             "method": method,
             "detail": detail,
             "max_concurrency": self.settings.max_concurrency,
+            "egress_proxy": self.settings.proxy_status(),
         }
 
     def start_device_login(self) -> dict[str, Any]:

@@ -91,6 +91,17 @@ uv run uvicorn app.main:app --reload --port 8088
 
 环境变量示例见 `.env.example`。运行数据默认写入 `data/`，生成结果与 Codex 配置位置可以通过 `IMAGE_GEN_*` 变量修改。
 
+## 出口代理
+
+设置 `IMAGE_GEN_PROXY_URL` 后，Codex 的登录、登录状态检查和图片生成进程会统一通过该出口代理访问网络。支持 `http://`、`https://`、`socks5://` 和 `socks5h://`，代理 URL 可以包含用户名和密码：
+
+```dotenv
+IMAGE_GEN_PROXY_URL=http://user:password@proxy.example.com:7890
+IMAGE_GEN_NO_PROXY=127.0.0.1,localhost,image-gen-service,image-gen-mcp
+```
+
+Docker Compose 会自动把这两个变量传入后端。修改后需要重新创建 `image-gen` 容器。工作台状态栏会标记代理已启用；`/api/health` 和 `/api/auth/status` 只返回脱敏后的代理协议、主机和端口，不会返回凭据或完整 URL。未设置时不会主动覆盖进程原有的网络环境。
+
 ## MCP
 
 `mcp/` 内保留 Streamable HTTP MCP 适配器，默认端点为 `/mcp`，健康检查为 `/health`。后端地址由 `IMAGE_GEN_MCP_BASE_URL` 指定，详细说明见 `mcp/README.md`。

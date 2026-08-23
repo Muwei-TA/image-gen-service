@@ -48,11 +48,8 @@ class ProcessRunner:
     def start(self, target: ProcessTarget, cwd: Path, command: list[str], log_path: Path) -> subprocess.Popen:
         del target
         env = os.environ.copy()
-        env.update({
-            "HOME": str(self.settings.codex_user_home),
-            "CODEX_HOME": str(self.settings.codex_home),
-            "TERM": "xterm-256color",
-        })
+        env.update(self.settings.codex_env())
+        env["TERM"] = "xterm-256color"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_handle = log_path.open("ab", buffering=0)
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0

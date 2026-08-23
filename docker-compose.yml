@@ -22,6 +22,8 @@ services:
       IMAGE_GEN_JOB_TIMEOUT_SECONDS: ${IMAGE_GEN_JOB_TIMEOUT_SECONDS:-1800}
       IMAGE_GEN_MAX_CONCURRENCY: ${IMAGE_GEN_MAX_CONCURRENCY:-50}
       IMAGE_GEN_CORS_ORIGIN: ${IMAGE_GEN_CORS_ORIGIN:-*}
+      IMAGE_GEN_PROXY_URL: ${IMAGE_GEN_PROXY_URL:-}
+      IMAGE_GEN_NO_PROXY: ${IMAGE_GEN_NO_PROXY:-127.0.0.1,localhost,image-gen-service,image-gen-mcp}
     volumes:
       - ${HOST_DATA_DIR:-./runtime/data}:${APP_DATA_DIR:-/data/image-gen-service}
       - ${HOST_WORKDIR:-./runtime/workspace}:${APP_WORKDIR:-/workspace}

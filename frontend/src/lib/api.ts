@@ -6,6 +6,12 @@ export interface CodexStatus {
   method?: 'chatgpt' | 'api_key' | null
   detail: string
   max_concurrency: number
+  egress_proxy: {
+    enabled: boolean
+    scheme?: string
+    host?: string
+    port?: number | null
+  }
 }
 
 export interface HealthStatus {

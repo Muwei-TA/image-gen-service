@@ -10,6 +10,8 @@ A local-first batch image generation workspace built with Vue 3 and FastAPI. It 
 - FastAPI backend with OpenAPI documentation at `/docs`.
 - Browser-guided Codex device authentication. Credentials stay in the local Codex credential store and are never returned by the API.
 - Direct cross-platform subprocess execution; no tmux or PTY dependency.
+- Download every generated image as one ZIP, grouped by batch.
+- Run up to 9 image-generation jobs concurrently; `IMAGE_GEN_MAX_CONCURRENCY` can lower the limit.
 - Native launch scripts for Windows and Unix-like systems.
 - Compatible Streamable HTTP MCP adapter in `mcp/`.
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 import mimetypes
+import re
 import zipfile
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
@@ -213,6 +214,48 @@ def get_file(path: str = Query(...)) -> FileResponse:
     return FileResponse(requested, media_type=content_type, headers={"Cache-Control": "public, max-age=3600"})
 
 
+def _build_image_archive(batches: list[dict[str, Any]], group_by_batch: bool) -> tuple[BytesIO, int]:
+    buffer = BytesIO()
+    used_names: set[str] = set()
+    count = 0
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for batch_number, batch in enumerate(batches, start=1):
+            batch_id = str(batch.get("batch_id") or f"batch-{batch_number}")
+            safe_batch_id = re.sub(r"[^A-Za-z0-9._-]+", "-", batch_id).strip(".-") or f"batch-{batch_number}"
+            prefix = f"{batch_number:03d}_{safe_batch_id}/" if group_by_batch else ""
+            for job in batch.get("jobs", []):
+                for result_path in job.get("result_paths") or []:
+                    try:
+                        path = _allowed_image_path(str(result_path))
+                    except HTTPException:
+                        continue
+                    name = f"{prefix}{int(job.get('index', count)) + 1:02d}_{path.name}"
+                    duplicate = 1
+                    while name in used_names:
+                        duplicate += 1
+                        name = f"{prefix}{int(job.get('index', count)) + 1:02d}_{duplicate}_{path.name}"
+                    used_names.add(name)
+                    archive.write(path, name)
+                    count += 1
+    buffer.seek(0)
+    return buffer, count
+
+
+@app.get("/downloads/images")
+@app.get("/api/downloads/images")
+def download_all_images() -> StreamingResponse:
+    summaries = sorted(manager.list_batches(), key=lambda item: item.get("created_at", ""), reverse=True)
+    batches = [manager.get_batch(str(item["batch_id"])) for item in summaries]
+    buffer, count = _build_image_archive(batches, group_by_batch=True)
+    if not count:
+        raise _not_found("generated image")
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="image-gen-results.zip"'},
+    )
+
+
 @app.get("/batches/{batch_id}/download")
 @app.get("/api/batches/{batch_id}/download")
 def download_batch(batch_id: str) -> StreamingResponse:
@@ -220,26 +263,9 @@ def download_batch(batch_id: str) -> StreamingResponse:
         batch = manager.get_batch(batch_id)
     except KeyError as exc:
         raise _not_found("batch") from exc
-    buffer = BytesIO()
-    used_names: set[str] = set()
-    count = 0
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for job in batch.get("jobs", []):
-            for result_path in job.get("result_paths") or []:
-                try:
-                    path = _allowed_image_path(str(result_path))
-                except HTTPException:
-                    continue
-                name = f"{int(job.get('index', count)) + 1:02d}_{path.name}"
-                while name in used_names:
-                    count += 1
-                    name = f"{int(job.get('index', count)) + 1:02d}_{count}_{path.name}"
-                used_names.add(name)
-                archive.write(path, name)
-                count += 1
+    buffer, count = _build_image_archive([batch], group_by_batch=False)
     if not count:
         raise _not_found("generated image")
-    buffer.seek(0)
     return StreamingResponse(
         buffer,
         media_type="application/zip",

@@ -18,7 +18,7 @@ import {
   PhWarningCircle,
   PhX,
 } from '@phosphor-icons/vue'
-import { api, batchDownloadUrl, imageUrl, type Batch, type DeviceLoginState, type HealthStatus, type UploadRecord } from './lib/api'
+import { allImagesDownloadUrl, api, batchDownloadUrl, imageUrl, type Batch, type DeviceLoginState, type HealthStatus, type UploadRecord } from './lib/api'
 
 const health = ref<HealthStatus | null>(null)
 const batches = ref<Batch[]>([])
@@ -33,12 +33,15 @@ const error = ref('')
 const loginOpen = ref(false)
 const loginState = ref<DeviceLoginState | null>(null)
 const previewPath = ref<string | null>(null)
+const selectedBatchId = ref<string | null>(null)
 let workspaceTimer: number | undefined
 let loginTimer: number | undefined
 
 const jobs = computed(() => batches.value.flatMap((batch) => batch.jobs || []))
 const generated = computed(() => jobs.value.flatMap((job) => (job.result_paths || []).map((path) => ({ path, job, batchId: job.batch_id }))))
 const activeJobs = computed(() => jobs.value.filter((job) => ['queued', 'running'].includes(job.status)))
+const selectedBatch = computed(() => batches.value.find((batch) => batch.batch_id === selectedBatchId.value) || null)
+const selectedBatchImages = computed(() => (selectedBatch.value?.jobs || []).flatMap((job) => (job.result_paths || []).map((path) => ({ path, job }))))
 const authenticated = computed(() => Boolean(health.value?.codex.authenticated))
 const platformLabel = computed(() => {
   const platform = health.value?.platform
@@ -154,6 +157,10 @@ function statusLabel(status: string) {
   return ({ queued: '等待中', running: '生成中', succeeded: '已完成', failed: '失败', canceled: '已取消' } as Record<string, string>)[status] || status
 }
 
+function batchStatusLabel(status: string) {
+  return ({ queued: '等待中', running: '生成中', completed: '已完成', finished_with_errors: '部分失败' } as Record<string, string>)[status] || status
+}
+
 function shortDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 }
@@ -228,7 +235,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="gallery-section">
-        <div class="gallery-heading"><div><h2>作品流</h2><span>{{ generated.length }} 个结果</span></div><p>最近完成的图像与正在运行的任务</p></div>
+        <div class="gallery-heading"><div><h2>作品流</h2><span>{{ generated.length }} 个结果</span></div><a v-if="generated.length" class="bulk-download" :href="allImagesDownloadUrl()"><PhDownloadSimple :size="17" />批量下载</a><p v-else>最近完成的图像与正在运行的任务</p></div>
 
         <div v-if="!jobs.length" class="empty-stage">
           <div class="empty-visual"><span /><span /><span /><PhImageSquare :size="34" /></div>
@@ -252,14 +259,30 @@ onBeforeUnmount(() => {
       <section v-if="batches.length" class="history-section">
         <div class="gallery-heading"><div><h2>最近批次</h2><span>{{ batches.length }}</span></div></div>
         <div class="batch-list">
-          <div v-for="batch in batches.slice(0, 8)" :key="batch.batch_id" class="batch-row">
+          <div v-for="batch in batches.slice(0, 8)" :key="batch.batch_id" class="batch-row" role="button" tabindex="0" @click="selectedBatchId = batch.batch_id" @keydown.enter.prevent.self="selectedBatchId = batch.batch_id" @keydown.space.prevent.self="selectedBatchId = batch.batch_id">
             <span class="batch-state" :class="batch.status" /><div><strong>{{ batch.jobs?.[0]?.prompt.replace(/\s--ar\s\S+$/, '') || batch.batch_id }}</strong><small>{{ shortDate(batch.created_at) }} · {{ batch.total }} 个任务</small></div>
             <span>{{ batch.succeeded }} 完成<span v-if="batch.failed"> · {{ batch.failed }} 失败</span></span>
-            <a v-if="batch.succeeded" :href="batchDownloadUrl(batch.batch_id)"><PhDownloadSimple :size="18" />下载</a>
+            <a v-if="batch.succeeded" :href="batchDownloadUrl(batch.batch_id)" @click.stop><PhDownloadSimple :size="18" />下载</a>
           </div>
         </div>
       </section>
     </main>
+
+    <div v-if="selectedBatch" class="modal-layer" @mousedown.self="selectedBatchId = null">
+      <section class="batch-dialog" role="dialog" aria-modal="true" aria-labelledby="batch-title">
+        <button class="dialog-close" @click="selectedBatchId = null"><PhX :size="20" /></button>
+        <span class="eyebrow">批次作品</span>
+        <h2 id="batch-title">{{ selectedBatch.jobs?.[0]?.prompt.replace(/\s--ar\s\S+$/, '') || selectedBatch.batch_id }}</h2>
+        <p>{{ shortDate(selectedBatch.created_at) }} · {{ selectedBatchImages.length }} 张图片</p>
+        <div v-if="selectedBatchImages.length" class="batch-gallery">
+          <button v-for="item in selectedBatchImages" :key="`${item.job.job_id}-${item.path}`" @click="previewPath = item.path">
+            <img :src="imageUrl(item.path)" :alt="item.job.prompt" loading="lazy" />
+          </button>
+        </div>
+        <div v-else class="batch-empty"><PhImageSquare :size="30" /><strong>该批次还没有生成图片</strong><span>{{ batchStatusLabel(selectedBatch.status) }}</span></div>
+        <a v-if="selectedBatchImages.length" class="batch-dialog-download" :href="batchDownloadUrl(selectedBatch.batch_id)"><PhDownloadSimple :size="18" />下载该批次</a>
+      </section>
+    </div>
 
     <div v-if="loginOpen" class="modal-layer" @mousedown.self="loginOpen = false">
       <section class="login-dialog" role="dialog" aria-modal="true" aria-labelledby="login-title">

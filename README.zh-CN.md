@@ -9,6 +9,8 @@ Image Gen Service 是一个基于 **Vue 3 + FastAPI + Codex CLI** 的本地优�
 - 全新的响应式 Vue 工作台：提示词、比例、数量、参考图、队列、历史、预览和批量下载集中在一个界面。
 - FastAPI 后端和 OpenAPI 文档，不再依赖 tmux 或 POSIX PTY。
 - 用户可在网页发起 Codex 设备码登录；浏览器只接收官方授权地址和一次性代码，不会接触本地凭证。
+- 作品流支持把全部已生成图片按批次打包为一个 ZIP 下载。
+- 生图任务最高并发量为 9，可通过 `IMAGE_GEN_MAX_CONCURRENCY` 调低。
 - Windows 原生启动、任务终止和批量取消。
 - 保留原有批次、任务、上传、文件和 MCP 接口兼容性。
 

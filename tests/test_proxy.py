@@ -2,11 +2,20 @@ from __future__ import annotations
 
 from dataclasses import replace
 from unittest.mock import patch
+import os
 
 import pytest
 
 from app.config import Settings, validate_proxy_url
 from app.process_runner import ProcessRunner, ProcessTarget
+
+
+def test_max_concurrency_defaults_to_and_is_capped_at_nine() -> None:
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("IMAGE_GEN_MAX_CONCURRENCY", None)
+        assert Settings.load().max_concurrency == 9
+    with patch.dict(os.environ, {"IMAGE_GEN_MAX_CONCURRENCY": "50"}):
+        assert Settings.load().max_concurrency == 9
 
 
 def test_validate_proxy_url_accepts_supported_schemes() -> None:

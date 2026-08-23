@@ -87,6 +87,36 @@ jobs:
           New-Item -ItemType Directory -Force release | Out-Null
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=${{ steps.version.outputs.version }}" packaging/windows-installer.iss
 
+      - name: Smoke test installed application
+        run: |
+          $installer = (Resolve-Path "release/ImageGenService-${{ steps.version.outputs.version }}-Setup-x64.exe").Path
+          $installDir = Join-Path $env:RUNNER_TEMP "ImageGenServiceSmoke"
+          $install = Start-Process $installer -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=$installDir" -Wait -PassThru
+          if ($install.ExitCode -ne 0) {
+            throw "Installer exited with code $($install.ExitCode)"
+          }
+          $env:IMAGE_GEN_PORT = "18088"
+          $application = Start-Process (Join-Path $installDir "ImageGenService.exe") -PassThru
+          try {
+            $ready = $false
+            for ($attempt = 0; $attempt -lt 60; $attempt++) {
+              try {
+                $health = Invoke-RestMethod -Uri "http://127.0.0.1:18088/api/health" -TimeoutSec 2
+                if ($health.ok -eq $true) {
+                  $ready = $true
+                  break
+                }
+              } catch {
+                Start-Sleep -Milliseconds 500
+              }
+            }
+            if (-not $ready) {
+              throw "Installed application did not become healthy"
+            }
+          } finally {
+            Stop-Process -Id $application.Id -Force -ErrorAction SilentlyContinue
+          }
+
       - name: Create checksums
         run: |
           $installer = "release/ImageGenService-${{ steps.version.outputs.version }}-Setup-x64.exe"

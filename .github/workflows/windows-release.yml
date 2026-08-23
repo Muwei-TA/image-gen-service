@@ -25,13 +25,13 @@ jobs:
         shell: pwsh
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: npm
@@ -91,9 +91,10 @@ jobs:
         run: |
           $installer = "release/ImageGenService-${{ steps.version.outputs.version }}-Setup-x64.exe"
           $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $(Split-Path $installer -Leaf)" | Set-Content -Encoding ascii "release/SHA256SUMS.txt"
+          $line = "$hash  $(Split-Path $installer -Leaf)`n"
+          [System.IO.File]::WriteAllText("$PWD/release/SHA256SUMS.txt", $line, [System.Text.Encoding]::ASCII)
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ImageGenService-${{ steps.version.outputs.version }}-Windows-x64
           path: |

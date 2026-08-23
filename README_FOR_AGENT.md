@@ -1,6 +1,6 @@
 # Agent Guide
 
-Image Gen Service is a Vue 3 + FastAPI application. Native Windows, macOS, and Linux execution is the default development path; Docker is optional.
+Codex Image Studio is a Vue 3 + FastAPI application. Native Windows, macOS, and Linux execution is the default development path; Docker is optional.
 
 ## Safety boundaries
 

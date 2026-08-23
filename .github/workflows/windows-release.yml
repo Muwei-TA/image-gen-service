@@ -1,4 +1,4 @@
-name: Build Windows installer
+name: Build Codex Image Studio Windows installer
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
       version:
         description: Installer version
         required: true
-        default: "0.2.0"
+        default: "0.3.0"
   push:
     tags:
       - "v*"
@@ -74,7 +74,7 @@ jobs:
         run: >-
           uv run --with pyinstaller==6.16.0 pyinstaller
           --noconfirm --clean --onedir --console
-          --name ImageGenService
+          --name CodexImageStudio
           --paths .
           --add-data "frontend/dist:frontend/dist"
           --add-binary "release-context/codex.exe:."
@@ -89,14 +89,14 @@ jobs:
 
       - name: Smoke test installed application
         run: |
-          $installer = (Resolve-Path "release/ImageGenService-${{ steps.version.outputs.version }}-Setup-x64.exe").Path
-          $installDir = Join-Path $env:RUNNER_TEMP "ImageGenServiceSmoke"
+          $installer = (Resolve-Path "release/CodexImageStudio-${{ steps.version.outputs.version }}-Setup-x64.exe").Path
+          $installDir = Join-Path $env:RUNNER_TEMP "CodexImageStudioSmoke"
           $install = Start-Process $installer -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=$installDir" -Wait -PassThru
           if ($install.ExitCode -ne 0) {
             throw "Installer exited with code $($install.ExitCode)"
           }
           $env:IMAGE_GEN_PORT = "18088"
-          $application = Start-Process (Join-Path $installDir "ImageGenService.exe") -PassThru
+          $application = Start-Process (Join-Path $installDir "CodexImageStudio.exe") -PassThru
           try {
             $ready = $false
             for ($attempt = 0; $attempt -lt 60; $attempt++) {
@@ -119,16 +119,16 @@ jobs:
 
       - name: Create checksums
         run: |
-          $installer = "release/ImageGenService-${{ steps.version.outputs.version }}-Setup-x64.exe"
+          $installer = "release/CodexImageStudio-${{ steps.version.outputs.version }}-Setup-x64.exe"
           $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
           $line = "$hash  $(Split-Path $installer -Leaf)`n"
           [System.IO.File]::WriteAllText("$PWD/release/SHA256SUMS.txt", $line, [System.Text.Encoding]::ASCII)
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ImageGenService-${{ steps.version.outputs.version }}-Windows-x64
+          name: CodexImageStudio-${{ steps.version.outputs.version }}-Windows-x64
           path: |
-            release/ImageGenService-${{ steps.version.outputs.version }}-Setup-x64.exe
+            release/CodexImageStudio-${{ steps.version.outputs.version }}-Setup-x64.exe
             release/SHA256SUMS.txt
           if-no-files-found: error
 
@@ -139,10 +139,10 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"
           $notes = @"
-          Windows x64 installer for Image Gen Service.
+          Windows x64 installer for Codex Image Studio.
 
           Includes the Vue/FastAPI application, Python runtime, and official Codex CLI rust-v$env:CODEX_VERSION.
           Codex credentials, generated images, uploads, proxy settings, and runtime data are not included.
           This build is unsigned and Windows SmartScreen may show a warning.
           "@
-          gh release create $tag "release/ImageGenService-${{ steps.version.outputs.version }}-Setup-x64.exe" "release/SHA256SUMS.txt" --repo "${{ github.repository }}" --title "Image Gen Service $tag" --notes $notes --verify-tag
+          gh release create $tag "release/CodexImageStudio-${{ steps.version.outputs.version }}-Setup-x64.exe" "release/SHA256SUMS.txt" --repo "${{ github.repository }}" --title "Codex Image Studio $tag" --notes $notes --verify-tag

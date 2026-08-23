@@ -1,7 +1,7 @@
 [project]
-name = "image-gen-service"
-version = "0.2.0"
-description = "Cross-platform FastAPI service for Codex-powered image generation"
+name = "codex-image-studio"
+version = "0.3.0"
+description = "Cross-platform Codex-powered image generation studio"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi==0.116.1",
@@ -16,7 +16,7 @@ dev = [
 ]
 
 [project.scripts]
-image-gen-service = "app.main:main"
+codex-image-studio = "app.main:main"
 
 [build-system]
 requires = ["hatchling==1.27.0"]

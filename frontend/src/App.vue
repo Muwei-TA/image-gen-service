@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
     <aside class="studio-rail">
       <div class="brand-lockup">
         <span class="brand-mark"><PhSparkle :size="20" weight="fill" /></span>
-        <div><strong>Image Studio</strong><span>powered by Codex</span></div>
+        <div><strong>Codex Image Studio</strong><span>AI image workspace</span></div>
       </div>
 
       <section class="composer-block">

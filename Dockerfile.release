@@ -11,8 +11,8 @@ RUN npm run build
 
 FROM ubuntu:22.04
 
-ARG APP_HOME=/opt/image-gen-service
-ARG APP_DATA_DIR=/data/image-gen-service
+ARG APP_HOME=/opt/codex-image-studio
+ARG APP_DATA_DIR=/data/codex-image-studio
 ARG APP_WORKDIR=/workspace
 ARG CODEX_HOME=/data/codex-home
 ARG CODEX_BIN_PATH=/usr/local/bin/codex
@@ -37,7 +37,7 @@ ENV PYTHONUNBUFFERED=1 \
     IMAGE_GEN_FRONTEND_DIST_DIR=${APP_HOME}/frontend/dist \
     IMAGE_GEN_FILE_ROOTS=${APP_DATA_DIR}:${APP_WORKDIR}:${CODEX_HOME}/generated_images \
     IMAGE_GEN_JOB_TIMEOUT_SECONDS=1800 \
-    IMAGE_GEN_MAX_CONCURRENCY=50 \
+    IMAGE_GEN_MAX_CONCURRENCY=9 \
     IMAGE_GEN_CORS_ORIGIN=* \
     APP_USER=${APP_USER} \
     APP_GROUP=${APP_USER}
@@ -79,4 +79,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8088/health >/dev/null || exit 1
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["image-gen-service"]
+CMD ["codex-image-studio"]

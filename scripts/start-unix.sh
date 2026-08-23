@@ -12,4 +12,4 @@ export IMAGE_GEN_DATA_DIR="${IMAGE_GEN_DATA_DIR:-$PROJECT_ROOT/data}"
 export IMAGE_GEN_DEFAULT_WORKDIR="${IMAGE_GEN_DEFAULT_WORKDIR:-$PROJECT_ROOT}"
 export IMAGE_GEN_FRONTEND_DIST_DIR="$PROJECT_ROOT/frontend/dist"
 
-exec uv run image-gen-service
+exec uv run codex-image-studio

@@ -1,7 +1,7 @@
 [project]
-name = "image-gen-service-mcp"
-version = "0.2.0"
-description = "Streamable HTTP MCP server for image-gen-service"
+name = "codex-image-studio-mcp"
+version = "0.3.0"
+description = "Streamable HTTP MCP server for Codex Image Studio"
 requires-python = ">=3.11"
 dependencies = [
   "httpx==0.28.1",
@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-image-gen-service-mcp = "image_gen_mcp.server:main"
+codex-image-studio-mcp = "image_gen_mcp.server:main"
 
 [build-system]
 requires = ["hatchling==1.28.0"]

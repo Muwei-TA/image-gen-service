@@ -1,8 +1,8 @@
-# Image Gen Service
+# Codex Image Studio
 
 [English README](README.md) | [智能体说明](README_FOR_AGENT.md)
 
-Image Gen Service 是一个基于 **Vue 3 + FastAPI + Codex CLI** 的本地优先生图工作台，支持 Windows、macOS 和 Linux 原生运行，也保留 Docker 构建能力。
+Codex Image Studio 是一个基于 **Vue 3 + FastAPI + Codex CLI** 的本地优先生图工作台，支持 Windows、macOS 和 Linux 原生运行，也保留 Docker 构建能力。
 
 ## 主要能力
 
@@ -26,8 +26,8 @@ Image Gen Service 是一个基于 **Vue 3 + FastAPI + Codex CLI** 的本地优�
 然后在 PowerShell 中运行：
 
 ```powershell
-git clone https://github.com/Muwei-TA/image-gen-service.git
-cd image-gen-service
+git clone https://github.com/Muwei-TA/codex-image-studio.git
+cd codex-image-studio
 .\scripts\start-windows.ps1
 ```
 
@@ -35,7 +35,7 @@ cd image-gen-service
 
 ### Windows 安装包
 
-GitHub Release 提供 x64 安装包。安装器内置应用所需的 Python 运行时、前端资源和官方 Codex CLI，不要求用户另外安装 Python、Node.js 或 Codex。应用安装到当前用户目录，运行数据保存在 `%LOCALAPPDATA%\ImageGenService`，Codex 登录凭据仍由 `%USERPROFILE%\.codex` 管理，不会写入安装包。
+GitHub Release 提供 x64 安装包。安装器内置应用所需的 Python 运行时、前端资源和官方 Codex CLI，不要求用户另外安装 Python、Node.js 或 Codex。应用安装到当前用户目录，新安装的运行数据保存在 `%LOCALAPPDATA%\CodexImageStudio`；升级安装会自动继续使用已有的 `%LOCALAPPDATA%\ImageGenService` 数据。Codex 登录凭据仍由 `%USERPROFILE%\.codex` 管理，不会写入安装包。
 
 安装包目前未进行代码签名，Windows SmartScreen 可能显示未知发布者警告。可使用 Release 中的 `SHA256SUMS.txt` 校验文件完整性。
 
@@ -68,8 +68,8 @@ GitHub Release 提供 x64 安装包。安装器内置应用所需的 Python 运�
 Docker 是可选部署方式。要测试当前源码，请先本地构建：
 
 ```bash
-docker build -t image-gen-service:local .
-docker run --rm -p 8088:8088 image-gen-service:local
+docker build -t codex-image-studio:local .
+docker run --rm -p 8088:8088 codex-image-studio:local
 ```
 
 标准 `Dockerfile` 构建 Vue 与 FastAPI 服务；需要在镜像内生成图片时，还必须提供可执行的 Codex CLI。正式发布流程使用 `Dockerfile.release` 把 Codex 运行时加入镜像。不要把本机 `.codex`、令牌、上传内容或生成图写入公开镜像。
@@ -105,10 +105,10 @@ uv run uvicorn app.main:app --reload --port 8088
 
 ```dotenv
 IMAGE_GEN_PROXY_URL=http://user:password@proxy.example.com:7890
-IMAGE_GEN_NO_PROXY=127.0.0.1,localhost,image-gen-service,image-gen-mcp
+IMAGE_GEN_NO_PROXY=127.0.0.1,localhost,codex-image-studio,image-gen-service,codex-image-studio-mcp,image-gen-mcp
 ```
 
-Docker Compose 会自动把这两个变量传入后端。修改后需要重新创建 `image-gen` 容器。工作台状态栏会标记代理已启用；`/api/health` 和 `/api/auth/status` 只返回脱敏后的代理协议、主机和端口，不会返回凭据或完整 URL。未设置时不会主动覆盖进程原有的网络环境。
+Docker Compose 会自动把这两个变量传入后端。修改后需要重新创建 `codex-image-studio` 容器。工作台状态栏会标记代理已启用；`/api/health` 和 `/api/auth/status` 只返回脱敏后的代理协议、主机和端口，不会返回凭据或完整 URL。未设置时不会主动覆盖进程原有的网络环境。
 
 ## MCP
 

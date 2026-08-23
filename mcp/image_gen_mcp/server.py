@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from .client import ImageGenClient, ImageGenServiceError
+from .client import ImageGenClient, CodexImageStudioError
 from .config import Settings
 from .media import MediaStore
 from .schemas import BATCH_ID_RE, JOB_ID_RE, CreateBatchInput, UploadReferenceImageInput
@@ -29,7 +29,7 @@ SERVER_INSTRUCTIONS = (
 )
 
 mcp = FastMCP(
-    "image-gen-service",
+    "codex-image-studio",
     instructions=SERVER_INSTRUCTIONS,
     host=settings.host,
     port=settings.port,
@@ -60,7 +60,7 @@ async def _wait_for_batch(client: ImageGenClient, batch_id: str) -> dict[str, An
         if batch.get("status") in TERMINAL_BATCH_STATUSES:
             return batch
         if time.monotonic() >= deadline:
-            raise ImageGenServiceError(f"generation timed out for batch {batch_id}")
+            raise CodexImageStudioError(f"generation timed out for batch {batch_id}")
         await asyncio.sleep(runtime.poll_interval_seconds)
 
 
@@ -205,7 +205,7 @@ async def imagegen(prompt: str, count: int = 1, reference_image_ids: list[str] |
         created = await client.create_batch(model.to_payload())
         batch_id = str(created.get("batch_id") or "")
         if not batch_id:
-            raise ImageGenServiceError("backend did not return batch_id")
+            raise CodexImageStudioError("backend did not return batch_id")
         batch = await _wait_for_batch(client, batch_id)
         paths: list[str] = []
         errors: list[str] = []
@@ -214,7 +214,7 @@ async def imagegen(prompt: str, count: int = 1, reference_image_ids: list[str] |
             if job.get("error"):
                 errors.append(str(job["error"]))
         if not paths:
-            raise ImageGenServiceError("image generation failed: " + ("; ".join(errors) or "no image returned"))
+            raise CodexImageStudioError("image generation failed: " + ("; ".join(errors) or "no image returned"))
         published: list[dict[str, Any]] = []
         inline_images: list[Image] = []
         for index, path in enumerate(paths, start=1):
@@ -226,7 +226,7 @@ async def imagegen(prompt: str, count: int = 1, reference_image_ids: list[str] |
         return _media_result(batch_id, published, inline_images=inline_images, errors=errors)
     except ValidationError as exc:
         raise ValueError(_validation_message(exc)) from exc
-    except ImageGenServiceError as exc:
+    except CodexImageStudioError as exc:
         raise RuntimeError(str(exc)) from exc
 
 

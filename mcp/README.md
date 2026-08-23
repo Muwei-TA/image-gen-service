@@ -1,6 +1,6 @@
-# Image Gen Service MCP Wrapper
+# Codex Image Studio MCP Wrapper
 
-Streamable HTTP MCP server that wraps the `image-gen-service` HTTP API into MCP tools.
+Streamable HTTP MCP server that wraps the `codex-image-studio` HTTP API into MCP tools.
 
 ## Endpoints
 
@@ -34,7 +34,7 @@ Set `IMAGE_GEN_MCP_MEDIA_BASE_URL` to an MCP service root URL that the Agent
 runtime can reach:
 
 ```env
-IMAGE_GEN_MCP_MEDIA_BASE_URL=http://image-gen-mcp:8090
+IMAGE_GEN_MCP_MEDIA_BASE_URL=http://codex-image-studio-mcp:8090
 IMAGE_GEN_MCP_MEDIA_TTL_SECONDS=3600
 ```
 
@@ -57,7 +57,7 @@ and never expose backend paths. The in-memory cache defaults to 100 images and
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -e .
-IMAGE_GEN_MCP_BASE_URL=http://127.0.0.1:8088 .venv/bin/image-gen-service-mcp
+IMAGE_GEN_MCP_BASE_URL=http://127.0.0.1:8088 .venv/bin/codex-image-studio-mcp
 ```
 
 Test:
@@ -72,7 +72,7 @@ The MCP server is included in the root `docker-compose.yml`. When both container
 are on `mcp-net`, the upstream address is:
 
 ```text
-http://image-gen-service:8088
+http://codex-image-studio:8088
 ```
 
 Gateway config example:
@@ -80,7 +80,7 @@ Gateway config example:
 ```toml
 [[servers.proxied.streamable_http]]
 name = "imagegen"
-url = "http://image-gen-mcp:8090/mcp"
+url = "http://codex-image-studio-mcp:8090/mcp"
 protocol = "streamable-http"
 timeout = 1800
 reconnect_on_failure = true
@@ -91,7 +91,7 @@ auto_start = true
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `IMAGE_GEN_MCP_BASE_URL` | `http://127.0.0.1:8088` | Backend image-gen-service URL |
+| `IMAGE_GEN_MCP_BASE_URL` | `http://127.0.0.1:8088` | Backend codex-image-studio URL |
 | `IMAGE_GEN_MCP_HOST` | `0.0.0.0` | MCP server bind host |
 | `IMAGE_GEN_MCP_PORT` | `8090` | MCP server port |
 | `IMAGE_GEN_MCP_PATH` | `/mcp` | MCP endpoint path |

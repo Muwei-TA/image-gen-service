@@ -1,24 +1,24 @@
 #ifndef MyAppVersion
-  #define MyAppVersion "0.2.0"
+  #define MyAppVersion "0.3.0"
 #endif
 
-#define MyAppName "Image Gen Service"
+#define MyAppName "Codex Image Studio"
 #define MyAppPublisher "Muwei-TA"
-#define MyAppExeName "ImageGenService.exe"
+#define MyAppExeName "CodexImageStudio.exe"
 
 [Setup]
 AppId={{AE5D5AE4-4EE1-4D43-B223-46D0E1219B48}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={localappdata}\Programs\ImageGenService
+DefaultDirName={localappdata}\Programs\CodexImageStudio
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\release
-OutputBaseFilename=ImageGenService-{#MyAppVersion}-Setup-x64
+OutputBaseFilename=CodexImageStudio-{#MyAppVersion}-Setup-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -27,7 +27,12 @@ CloseApplications=yes
 RestartApplications=no
 
 [Files]
-Source: "..\dist\ImageGenService\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\CodexImageStudio\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[InstallDelete]
+Type: files; Name: "{app}\ImageGenService.exe"
+Type: files; Name: "{autoprograms}\Image Gen Service.lnk"
+Type: files; Name: "{autodesktop}\Image Gen Service.lnk"
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

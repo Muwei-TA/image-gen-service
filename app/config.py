@@ -46,7 +46,7 @@ class Settings:
     generated_images_dir: Path
     results_dir: Path
     proxy_url: str = field(default="", repr=False)
-    proxy_no_proxy: str = "127.0.0.1,localhost,image-gen-service,image-gen-mcp"
+    proxy_no_proxy: str = "127.0.0.1,localhost,codex-image-studio,image-gen-service,codex-image-studio-mcp,image-gen-mcp"
 
     @classmethod
     def load(cls) -> "Settings":
@@ -83,7 +83,7 @@ class Settings:
             proxy_url=validate_proxy_url(os.environ.get("IMAGE_GEN_PROXY_URL", "")),
             proxy_no_proxy=os.environ.get(
                 "IMAGE_GEN_NO_PROXY",
-                "127.0.0.1,localhost,image-gen-service,image-gen-mcp",
+                "127.0.0.1,localhost,codex-image-studio,image-gen-service,codex-image-studio-mcp,image-gen-mcp",
             ).strip(),
         )
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import deque
-from pathlib import Path
 from threading import RLock, Thread
 from typing import Any
 import os

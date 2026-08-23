@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE_NAME="${1:-image-gen-service:release}"
+IMAGE_NAME="${1:-codex-image-studio:release}"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CODEX_BIN="${CODEX_BIN:?Set CODEX_BIN to the Codex CLI executable path}"
 CODEX_RUNTIME="${CODEX_RUNTIME:?Set CODEX_RUNTIME to the Codex runtime directory}"

@@ -1,15 +1,16 @@
 services:
-  image-gen:
-    image: muwei517/image-gen-service:latest
-    container_name: ${IMAGE_GEN_CONTAINER_NAME:-image-gen-service}
+  codex-image-studio:
+    # Keep the published legacy image as the default until a renamed image is released.
+    image: ${CODEX_IMAGE_STUDIO_IMAGE:-muwei517/image-gen-service:latest}
+    container_name: ${IMAGE_GEN_CONTAINER_NAME:-codex-image-studio}
     user: "root"
     ports:
       - "${IMAGE_GEN_PORT:-8088}:8088"
     environment:
       IMAGE_GEN_HOST: 0.0.0.0
       IMAGE_GEN_PORT: 8088
-      IMAGE_GEN_SERVICE_ROOT: ${APP_HOME:-/opt/image-gen-service}
-      IMAGE_GEN_DATA_DIR: ${APP_DATA_DIR:-/data/image-gen-service}
+      IMAGE_GEN_SERVICE_ROOT: ${APP_HOME:-/opt/codex-image-studio}
+      IMAGE_GEN_DATA_DIR: ${APP_DATA_DIR:-/data/codex-image-studio}
       IMAGE_GEN_DEFAULT_WORKDIR: ${APP_WORKDIR:-/workspace}
       IMAGE_GEN_CODEX_BIN: ${CODEX_BIN_PATH:-/usr/local/bin/codex}
       IMAGE_GEN_CODEX_HOME: ${CODEX_HOME:-/data/codex-home}
@@ -17,15 +18,15 @@ services:
       IMAGE_GEN_GENERATED_IMAGES_DIR: ${CODEX_HOME:-/data/codex-home}/generated_images
       APP_USER: root
       APP_GROUP: root
-      IMAGE_GEN_FRONTEND_DIST_DIR: ${APP_HOME:-/opt/image-gen-service}/frontend/dist
-      IMAGE_GEN_FILE_ROOTS: ${APP_DATA_DIR:-/data/image-gen-service}:${APP_WORKDIR:-/workspace}:${CODEX_HOME:-/data/codex-home}/generated_images
+      IMAGE_GEN_FRONTEND_DIST_DIR: ${APP_HOME:-/opt/codex-image-studio}/frontend/dist
+      IMAGE_GEN_FILE_ROOTS: ${APP_DATA_DIR:-/data/codex-image-studio}:${APP_WORKDIR:-/workspace}:${CODEX_HOME:-/data/codex-home}/generated_images
       IMAGE_GEN_JOB_TIMEOUT_SECONDS: ${IMAGE_GEN_JOB_TIMEOUT_SECONDS:-1800}
       IMAGE_GEN_MAX_CONCURRENCY: ${IMAGE_GEN_MAX_CONCURRENCY:-9}
       IMAGE_GEN_CORS_ORIGIN: ${IMAGE_GEN_CORS_ORIGIN:-*}
       IMAGE_GEN_PROXY_URL: ${IMAGE_GEN_PROXY_URL:-}
-      IMAGE_GEN_NO_PROXY: ${IMAGE_GEN_NO_PROXY:-127.0.0.1,localhost,image-gen-service,image-gen-mcp}
+      IMAGE_GEN_NO_PROXY: ${IMAGE_GEN_NO_PROXY:-127.0.0.1,localhost,codex-image-studio,image-gen-service,codex-image-studio-mcp,image-gen-mcp}
     volumes:
-      - ${HOST_DATA_DIR:-./runtime/data}:${APP_DATA_DIR:-/data/image-gen-service}
+      - ${HOST_DATA_DIR:-./runtime/data}:${APP_DATA_DIR:-/data/codex-image-studio}
       - ${HOST_WORKDIR:-./runtime/workspace}:${APP_WORKDIR:-/workspace}
       - ${HOST_CODEX_HOME:-./runtime/codex-home}:${CODEX_HOME:-/data/codex-home}
       - ${HOST_IMAGES_DIR:-./runtime/codex-home/generated_images}:${CODEX_HOME:-/data/codex-home}/generated_images
@@ -37,19 +38,19 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  image-gen-mcp:
+  codex-image-studio-mcp:
     build:
       context: ./mcp
       dockerfile: Dockerfile
-    image: image-gen-mcp:0.2.0
-    container_name: image-gen-mcp
+    image: codex-image-studio-mcp:0.3.0
+    container_name: codex-image-studio-mcp
     depends_on:
-      image-gen:
+      codex-image-studio:
         condition: service_healthy
     ports:
       - "127.0.0.1:${IMAGE_GEN_MCP_PUBLISH_PORT:-18089}:8090"
     environment:
-      IMAGE_GEN_MCP_BASE_URL: http://image-gen-service:8088
+      IMAGE_GEN_MCP_BASE_URL: http://codex-image-studio:8088
       IMAGE_GEN_MCP_HOST: 0.0.0.0
       IMAGE_GEN_MCP_PORT: 8090
       IMAGE_GEN_MCP_PATH: /mcp

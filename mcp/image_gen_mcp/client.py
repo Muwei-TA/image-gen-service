@@ -8,7 +8,7 @@ from .config import Settings
 from .schemas import clean_response
 
 
-class ImageGenServiceError(RuntimeError):
+class CodexImageStudioError(RuntimeError):
     pass
 
 
@@ -21,17 +21,17 @@ class ImageGenClient:
             async with httpx.AsyncClient(timeout=self.settings.timeout_seconds, trust_env=False) as client:
                 response = await client.request(method, f"{self.settings.base_url}{path}", **kwargs)
         except httpx.RequestError as exc:
-            raise ImageGenServiceError(f"image-gen-service unavailable at {self.settings.base_url}") from exc
+            raise CodexImageStudioError(f"codex-image-studio unavailable at {self.settings.base_url}") from exc
         if response.status_code >= 400:
             try:
                 detail = response.json().get("error")
             except Exception:
                 detail = response.text.strip() or response.reason_phrase
-            raise ImageGenServiceError(f"image-gen-service HTTP {response.status_code}: {detail}")
+            raise CodexImageStudioError(f"codex-image-studio HTTP {response.status_code}: {detail}")
         try:
             data = response.json()
         except ValueError as exc:
-            raise ImageGenServiceError("image-gen-service returned non-JSON response") from exc
+            raise CodexImageStudioError("codex-image-studio returned non-JSON response") from exc
         return clean_response(data, redact_paths=redact and self.settings.redact_paths)
 
     async def health_check(self) -> dict[str, Any]:
@@ -60,14 +60,14 @@ class ImageGenClient:
             async with httpx.AsyncClient(timeout=self.settings.timeout_seconds, trust_env=False) as client:
                 response = await client.get(f"{self.settings.base_url}/files", params={"path": result_path})
         except httpx.RequestError as exc:
-            raise ImageGenServiceError("failed to download generated image") from exc
+            raise CodexImageStudioError("failed to download generated image") from exc
         if response.status_code >= 400:
-            raise ImageGenServiceError(f"generated image download failed with HTTP {response.status_code}")
+            raise CodexImageStudioError(f"generated image download failed with HTTP {response.status_code}")
         mime_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
         if not mime_type.startswith("image/"):
-            raise ImageGenServiceError(f"generated result is not an image: {mime_type or 'unknown'}")
+            raise CodexImageStudioError(f"generated result is not an image: {mime_type or 'unknown'}")
         if len(response.content) > self.settings.max_inline_image_bytes:
-            raise ImageGenServiceError("generated image exceeds inline MCP size limit")
+            raise CodexImageStudioError("generated image exceeds inline MCP size limit")
         return response.content, mime_type
 
     async def cancel_batch(self, batch_id: str) -> dict[str, Any]:

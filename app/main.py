@@ -34,8 +34,8 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="Image Gen Service",
-    version="0.2.0",
+    title="Codex Image Studio",
+    version="0.3.0",
     description="Cross-platform Codex image generation workspace",
     lifespan=lifespan,
 )

@@ -1,9 +1,9 @@
-# image-gen-service - self-contained image (Vue frontend + FastAPI + Codex CLI)
+# codex-image-studio - self-contained image (Vue frontend + FastAPI + Codex CLI)
 #
 # One command builds a fully working image, including the Codex image-generation
 # runtime. No external context or pre-built Codex runtime required.
 #
-#   docker build -t image-gen-service:latest .
+#   docker build -t codex-image-studio:latest .
 #
 # Codex CLI is downloaded from the official openai/codex GitHub release. Pin the
 # version with --build-arg CODEX_VERSION=... if you want a specific release.
@@ -26,22 +26,22 @@ ARG CODEX_URL=https://github.com/openai/codex/releases/download/rust-v${CODEX_VE
 ENV PYTHONUNBUFFERED=1 \
     IMAGE_GEN_HOST=0.0.0.0 \
     IMAGE_GEN_PORT=8088 \
-    IMAGE_GEN_SERVICE_ROOT=/opt/image-gen-service \
-    IMAGE_GEN_DATA_DIR=/data/image-gen-service \
+    IMAGE_GEN_SERVICE_ROOT=/opt/codex-image-studio \
+    IMAGE_GEN_DATA_DIR=/data/codex-image-studio \
     IMAGE_GEN_DEFAULT_WORKDIR=/workspace \
-    IMAGE_GEN_FRONTEND_DIST_DIR=/opt/image-gen-service/frontend/dist \
+    IMAGE_GEN_FRONTEND_DIST_DIR=/opt/codex-image-studio/frontend/dist \
     IMAGE_GEN_CODEX_HOME=/data/codex-home \
     IMAGE_GEN_CODEX_BIN=/usr/local/bin/codex \
     IMAGE_GEN_CODEX_USER_HOME=/root \
     IMAGE_GEN_GENERATED_IMAGES_DIR=/data/codex-home/generated_images \
-    IMAGE_GEN_FILE_ROOTS=/data/image-gen-service:/workspace:/data/codex-home/generated_images \
+    IMAGE_GEN_FILE_ROOTS=/data/codex-image-studio:/workspace:/data/codex-home/generated_images \
     HOME=/root
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/image-gen-service
+WORKDIR /opt/codex-image-studio
 
 COPY pyproject.toml ./
 COPY app ./app
@@ -61,4 +61,4 @@ RUN set -eux \
 EXPOSE 8088
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8088/health', timeout=3)"
-CMD ["image-gen-service"]
+CMD ["codex-image-studio"]

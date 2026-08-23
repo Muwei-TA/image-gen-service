@@ -44,5 +44,5 @@ if ($Dev) {
     }
 }
 else {
-    uv run image-gen-service
+    uv run codex-image-studio
 }

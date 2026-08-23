@@ -1,4 +1,4 @@
-# Image Gen Service
+# Codex Image Studio
 
 [中文文档](README.zh-CN.md) | [Agent guide](README_FOR_AGENT.md)
 
@@ -29,7 +29,7 @@ Or double-click `scripts\start-windows.cmd`.
 
 ### Windows installer
 
-GitHub Releases provide an x64 installer that bundles the Python runtime, built frontend, and official Codex CLI. It installs per-user without administrator privileges. Runtime data is stored under `%LOCALAPPDATA%\ImageGenService`, while Codex authentication remains in `%USERPROFILE%\.codex` and is never included in the installer.
+GitHub Releases provide an x64 installer that bundles the Python runtime, built frontend, and official Codex CLI. It installs per-user without administrator privileges. New installations store runtime data under `%LOCALAPPDATA%\CodexImageStudio`; upgrades keep using existing `%LOCALAPPDATA%\ImageGenService` data automatically. Codex authentication remains in `%USERPROFILE%\.codex` and is never included in the installer.
 
 The installer is currently unsigned, so Windows SmartScreen may show an unknown-publisher warning. Verify downloads with the included `SHA256SUMS.txt`.
 
@@ -54,8 +54,8 @@ The Vue dev server runs at `http://127.0.0.1:5173` and proxies API requests to F
 Docker is optional. Build the refactored source locally before starting it:
 
 ```bash
-docker build -t image-gen-service:local .
-docker run --rm -p 8088:8088 image-gen-service:local
+docker build -t codex-image-studio:local .
+docker run --rm -p 8088:8088 codex-image-studio:local
 ```
 
 For production images that bundle a Codex binary, use the release build workflow and `Dockerfile.release`.
@@ -66,10 +66,10 @@ Set `IMAGE_GEN_PROXY_URL` to route Codex login, status checks, and image-generat
 
 ```dotenv
 IMAGE_GEN_PROXY_URL=http://user:password@proxy.example.com:7890
-IMAGE_GEN_NO_PROXY=127.0.0.1,localhost,image-gen-service,image-gen-mcp
+IMAGE_GEN_NO_PROXY=127.0.0.1,localhost,codex-image-studio,image-gen-service,codex-image-studio-mcp,image-gen-mcp
 ```
 
-Docker Compose forwards both settings to the backend. Recreate the `image-gen` container after changing them. Health and auth responses expose only the proxy scheme, host, and port; credentials and the complete URL are never returned.
+Docker Compose forwards both settings to the backend. Recreate the `codex-image-studio` container after changing them. Health and auth responses expose only the proxy scheme, host, and port; credentials and the complete URL are never returned.
 
 ## Development
 

@@ -15,7 +15,10 @@ def configure_environment() -> None:
     user_home = Path(os.environ.get("USERPROFILE", str(Path.home())))
     local_app_data = Path(os.environ.get("LOCALAPPDATA", str(user_home / "AppData" / "Local")))
     documents = Path(os.environ.get("USERPROFILE", str(user_home))) / "Documents"
-    data_dir = local_app_data / "ImageGenService" / "data"
+    data_dir = local_app_data / "CodexImageStudio" / "data"
+    legacy_data_dir = local_app_data / "ImageGenService" / "data"
+    if legacy_data_dir.exists() and not data_dir.exists():
+        data_dir = legacy_data_dir
     codex_home = user_home / ".codex"
     generated_images = codex_home / "generated_images"
 
@@ -39,7 +42,8 @@ def configure_environment() -> None:
 
 
 def open_workspace_when_ready() -> None:
-    url = "http://127.0.0.1:8088"
+    port = os.environ.get("IMAGE_GEN_PORT", "8088")
+    url = f"http://127.0.0.1:{port}"
     health_url = f"{url}/api/health"
     for _ in range(60):
         try:

@@ -1,0 +1,14 @@
+services:
+  runner:
+    image: docker.io/gitea/runner:3.3.0
+    container_name: codex-image-studio-gitea-runner
+    restart: unless-stopped
+    environment:
+      GITEA_INSTANCE_URL: ${GITEA_INSTANCE_URL:-http://192.168.50.28:3000}
+      GITEA_RUNNER_REGISTRATION_TOKEN_FILE: /run/secrets/registration-token
+      GITEA_RUNNER_NAME: ${GITEA_RUNNER_NAME:-nas77-docker}
+      GITEA_RUNNER_LABELS: ubuntu-latest:docker://docker.gitea.com/runner-images:ubuntu-latest
+    volumes:
+      - ./data:/data
+      - ./registration-token:/run/secrets/registration-token:ro
+      - /var/run/docker.sock:/var/run/docker.sock

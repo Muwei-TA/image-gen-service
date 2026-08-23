@@ -13,8 +13,6 @@ class Settings:
     codex_model: str
     codex_home: Path
     codex_user_home: Path
-    terminal_bin: str
-    tmux_bin: str
     host: str
     port: int
     batch_prefix: str
@@ -48,8 +46,6 @@ class Settings:
             codex_model=os.environ.get("IMAGE_GEN_CODEX_MODEL", "gpt-5.4-mini"),
             codex_home=codex_home,
             codex_user_home=codex_user_home,
-            terminal_bin=os.environ.get("IMAGE_GEN_TERMINAL_BIN", "python3"),
-            tmux_bin=os.environ.get("IMAGE_GEN_TMUX_BIN", "tmux"),
             host=os.environ.get("IMAGE_GEN_HOST", "0.0.0.0"),
             port=int(os.environ.get("IMAGE_GEN_PORT", "8088")),
             batch_prefix=os.environ.get("IMAGE_GEN_BATCH_PREFIX", "$imagegen"),
@@ -66,6 +62,9 @@ class Settings:
     def ensure_dirs(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.codex_user_home.mkdir(parents=True, exist_ok=True)
+        self.codex_home.mkdir(parents=True, exist_ok=True)
+        self.generated_images_dir.mkdir(parents=True, exist_ok=True)
         (self.data_dir / "jobs").mkdir(parents=True, exist_ok=True)
         (self.data_dir / "uploads").mkdir(parents=True, exist_ok=True)
         self.results_dir.mkdir(parents=True, exist_ok=True)

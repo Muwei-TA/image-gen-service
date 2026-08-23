@@ -4,18 +4,20 @@ from pathlib import Path
 from threading import RLock, Thread
 from typing import Any, Dict
 from datetime import datetime, timezone
+from types import SimpleNamespace
 import os
 import re
 import signal
 import shutil
 import time
 
-from app.codex_runner import command_string, prepare_job
+from app.auth import CodexAuthManager
+from app.codex_runner import command_parts, command_string, prepare_job
 from app.config import Settings
 from app.models import BatchRecord, JobRecord, new_id, now_iso
 from app.result_parser import extract_result_paths
 from app.store import StateStore
-from app.tmux_runner import TerminalRunner
+from app.process_runner import ProcessRunner
 
 
 SESSION_ID_RE = re.compile(r"session id:\s*([0-9a-f-]+)", re.IGNORECASE)
@@ -25,7 +27,8 @@ class JobManager:
     def __init__(self, settings: Settings, store: StateStore):
         self.settings = settings
         self.store = store
-        self.terminal = TerminalRunner(settings)
+        self.terminal = ProcessRunner(settings)
+        self.auth = CodexAuthManager(settings)
         self.procs: dict[str, Any] = {}
         self.lock = RLock()
 
@@ -87,16 +90,7 @@ class JobManager:
         return self.get_batch(batch_id)
 
     def codex_status(self) -> Dict[str, Any]:
-        executable = shutil.which(str(self.settings.codex_bin)) if not self.settings.codex_bin.is_absolute() else str(self.settings.codex_bin)
-        bin_exists = bool(executable and Path(executable).exists())
-        auth_path = self.settings.codex_home / "auth.json"
-        return {
-            "bin": str(self.settings.codex_bin),
-            "available": bin_exists,
-            "authenticated": auth_path.exists(),
-            "auth_path": str(auth_path),
-            "max_concurrency": self.settings.max_concurrency,
-        }
+        return self.auth.status()
 
     def _pump_queue(self) -> None:
         with self.lock:
@@ -147,7 +141,7 @@ class JobManager:
             proc = self.terminal.start(
                 target=target,
                 cwd=Path(job["workdir"]),
-                command=job["command"],
+                command=command_parts(SimpleNamespace(**job), self.settings),
                 log_path=Path(job["log_path"]),
             )
             self.procs[job["job_id"]] = proc
@@ -346,10 +340,8 @@ class JobManager:
         return archived
 
     def _terminate_proc(self, proc) -> None:
-        if proc.poll() is not None:
-            return
+        self.terminal.terminate(proc)
         try:
-            proc.terminate()
             proc.wait(timeout=5)
         except Exception:
             try:
@@ -358,6 +350,17 @@ class JobManager:
                 pass
 
     def _kill_process_tree(self, pid: int) -> None:
+        if os.name == "nt":
+            import subprocess
+
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, check=False)
+            return
+        if not Path("/proc").exists():
+            try:
+                os.killpg(pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+            return
         children: dict[int, list[int]] = {}
         for name in os.listdir("/proc"):
             if not name.isdigit():

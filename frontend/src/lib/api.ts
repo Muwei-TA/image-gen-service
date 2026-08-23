@@ -1,153 +1,114 @@
-const BASE_URL = '';
+const API = '/api'
 
-export interface BatchRequest {
-  prompt?: string;
-  prompts?: string[];
-  count?: number;
-  workdir?: string;
-  reference_image_ids?: string[];
-  reference_images?: string[];
-}
-
-export interface Job {
-  job_id: string;
-  batch_id: string;
-  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'canceled';
-  stage?: string;
-  prompt: string;
-  result_paths: string[];
-  error?: string;
-}
-
-export interface Batch {
-  batch_id: string;
-  status: string;
-  jobs: Job[];
-  created_at: string;
-  total: number;
-  running: number;
-  succeeded: number;
-  failed: number;
-  canceled?: number;
-}
-
-export interface UploadRecord {
-  image_id: string;
-  filename: string;
-  mime_type: string;
-  size: number;
-  path: string;
-  created_at: string;
+export interface CodexStatus {
+  available: boolean
+  authenticated: boolean
+  method?: 'chatgpt' | 'api_key' | null
+  detail: string
+  max_concurrency: number
 }
 
 export interface HealthStatus {
-  ok: boolean;
-  codex?: {
-    available: boolean;
-    authenticated: boolean;
-    auth_path: string;
-    bin: string;
-    max_concurrency: number;
-  };
+  ok: boolean
+  platform: { os: string; native_windows: boolean; docker: boolean }
+  codex: CodexStatus
 }
 
-export async function getHealth(): Promise<HealthStatus> {
-  const res = await fetch(`${BASE_URL}/health`);
-  if (!res.ok) throw new Error(await readError(res, 'Failed to fetch service health'));
-  return res.json();
+export interface DeviceLoginState {
+  running: boolean
+  completed: boolean
+  success: boolean
+  verification_url?: string | null
+  user_code?: string | null
+  message: string
 }
 
-export async function submitBatch(req: BatchRequest): Promise<Batch> {
-  const res = await fetch(`${BASE_URL}/batches`, {
+export interface Job {
+  job_id: string
+  batch_id: string
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'canceled'
+  stage?: string
+  prompt: string
+  result_paths: string[]
+  error?: string
+}
+
+export interface Batch {
+  batch_id: string
+  status: string
+  jobs: Job[]
+  created_at: string
+  total: number
+  running: number
+  succeeded: number
+  failed: number
+  canceled?: number
+}
+
+export interface UploadRecord {
+  image_id: string
+  filename: string
+  mime_type: string
+  size: number
+  path: string
+  created_at: string
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API}${path}`, init)
+  if (!response.ok) {
+    let message = `请求失败 (${response.status})`
+    try {
+      const payload = await response.json()
+      message = payload.error || payload.detail || message
+    } catch {
+      // Response is not JSON.
+    }
+    throw new Error(message)
+  }
+  return response.json() as Promise<T>
+}
+
+export const api = {
+  health: () => request<HealthStatus>('/health'),
+  authStatus: () => request<CodexStatus>('/auth/status'),
+  startLogin: () => request<DeviceLoginState>('/auth/login/device', { method: 'POST' }),
+  loginState: () => request<DeviceLoginState>('/auth/login/device'),
+  cancelLogin: () => request<DeviceLoginState>('/auth/login/device', { method: 'DELETE' }),
+  logout: () => request<CodexStatus>('/auth/logout', { method: 'POST' }),
+  batches: () => request<{ batches: Batch[] }>('/batches'),
+  batch: (id: string) => request<Batch>(`/batches/${encodeURIComponent(id)}`),
+  createBatch: (payload: Record<string, unknown>) => request<Batch>('/batches', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
-  });
-  if (!res.ok) throw new Error(await readError(res, 'Failed to submit batch'));
-  return res.json();
+    body: JSON.stringify(payload),
+  }),
+  cancelJob: (id: string) => request<Job>(`/jobs/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
+  uploads: () => request<{ uploads: UploadRecord[] }>('/uploads'),
+  deleteUpload: (id: string) => request(`/uploads/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  upload: async (file: File) => {
+    const data = await fileToBase64(file)
+    return request<UploadRecord>('/uploads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: file.name, mime_type: file.type || 'image/png', data }),
+    })
+  },
 }
 
-export async function getBatch(batchId: string): Promise<Batch> {
-  const res = await fetch(`${BASE_URL}/batches/${batchId}`);
-  if (!res.ok) throw new Error(await readError(res, 'Failed to fetch batch'));
-  return res.json();
-}
-
-export async function getBatches(): Promise<{ batches: Batch[] }> {
-  const res = await fetch(`${BASE_URL}/batches`);
-  if (!res.ok) throw new Error(await readError(res, 'Failed to fetch batches'));
-  return res.json();
-}
-
-export async function cancelJob(jobId: string): Promise<Job> {
-  const res = await fetch(`${BASE_URL}/jobs/${encodeURIComponent(jobId)}/cancel`, {
-    method: 'POST',
-  });
-  if (!res.ok) throw new Error(await readError(res, 'Failed to cancel job'));
-  return res.json();
-}
-
-export async function cancelBatch(batchId: string): Promise<Batch> {
-  const res = await fetch(`${BASE_URL}/batches/${encodeURIComponent(batchId)}/cancel`, {
-    method: 'POST',
-  });
-  if (!res.ok) throw new Error(await readError(res, 'Failed to cancel batch'));
-  return res.json();
+export function imageUrl(path: string): string {
+  return `${API}/files?path=${encodeURIComponent(path)}`
 }
 
 export function batchDownloadUrl(batchId: string): string {
-  return `${BASE_URL}/batches/${encodeURIComponent(batchId)}/download`;
-}
-
-export async function getUploads(): Promise<{ uploads: UploadRecord[] }> {
-  const res = await fetch(`${BASE_URL}/uploads`);
-  if (!res.ok) throw new Error(await readError(res, 'Failed to fetch uploads'));
-  return res.json();
-}
-
-export async function uploadImage(file: File): Promise<UploadRecord> {
-  const data = await fileToBase64(file);
-  const res = await fetch(`${BASE_URL}/uploads`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      filename: file.name,
-      mime_type: file.type || 'image/png',
-      data,
-    }),
-  });
-  if (!res.ok) throw new Error(await readError(res, 'Failed to upload image'));
-  return res.json();
-}
-
-export async function deleteUpload(imageId: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/uploads/${encodeURIComponent(imageId)}`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) throw new Error(await readError(res, 'Failed to delete upload'));
-}
-
-export function fileUrl(path: string): string {
-  return `${BASE_URL}/files?path=${encodeURIComponent(path)}`;
+  return `${API}/batches/${encodeURIComponent(batchId)}/download`
 }
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = String(reader.result || '');
-      resolve(value.includes(',') ? value.split(',')[1] : value);
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-async function readError(res: Response, fallback: string): Promise<string> {
-  try {
-    const payload = await res.json();
-    return payload?.error || fallback;
-  } catch {
-    return fallback;
-  }
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || '').split(',').pop() || '')
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
 }

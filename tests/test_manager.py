@@ -8,10 +8,9 @@ from tempfile import TemporaryDirectory
 from app.codex_runner import build_prompt, command_string
 from app.config import Settings
 from app.manager import JobManager
-from app.pty_worker import TERMINAL_RESPONSES
 from app.result_parser import RESULT_PATTERN, extract_result_paths
 from app.store import StateStore
-from app.tmux_runner import TerminalRunner, TerminalSnapshot, TerminalTarget
+from app.process_runner import ProcessRunner, ProcessSnapshot, ProcessTarget
 from app.uploads import create_upload
 
 
@@ -60,14 +59,12 @@ class ServiceTests(unittest.TestCase):
 
     def test_terminal_names(self):
         settings = Settings.load()
-        runner = TerminalRunner(settings)
+        runner = ProcessRunner(settings)
         names = runner.names_for("batch_1234567890", 2)
         self.assertTrue(names.session_name.startswith("image-gen-"))
         self.assertEqual(names.window_name, "img-3")
 
-    def test_terminal_runner_uses_pty_worker(self):
-        if os.name != "posix":
-            self.skipTest("PTY worker test requires a POSIX host")
+    def test_terminal_runner_captures_output_cross_platform(self):
         with TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             settings = Settings(
@@ -77,8 +74,6 @@ class ServiceTests(unittest.TestCase):
                 codex_model="gpt-5.4-mini",
                 codex_home=tmp_path / "codex-home",
                 codex_user_home=tmp_path,
-                terminal_bin="python3",
-                tmux_bin="tmux",
                 host="127.0.0.1",
                 port=0,
                 batch_prefix="$imagegen",
@@ -92,24 +87,21 @@ class ServiceTests(unittest.TestCase):
                 results_dir=tmp_path / "data" / "results",
             )
             settings.ensure_dirs()
-            runner = TerminalRunner(settings)
+            runner = ProcessRunner(settings)
             log_path = settings.data_dir / "test-pty.log"
             proc = runner.start(
                 runner.names_for("batch_pty", 0),
                 settings.root,
-                "printf 'hello from pty'",
+                [sys.executable, "-c", "print('hello from native runner')"],
                 log_path,
             )
             self.assertEqual(proc.wait(timeout=5), 0)
-            self.assertIn("hello from pty", log_path.read_text())
+            self.assertIn("hello from native runner", log_path.read_text())
 
     def test_result_pattern_matches_generated_image_path(self):
         output = "file:///tmp/codex-home/generated_images/abc/ig_test.png"
         self.assertIsNotNone(RESULT_PATTERN.search(output))
         self.assertEqual(extract_result_paths(output), ["/tmp/codex-home/generated_images/abc/ig_test.png"])
-
-    def test_pty_worker_handles_keyboard_protocol_query(self):
-        self.assertEqual(TERMINAL_RESPONSES[b"\x1b[?u"], b"\x1b[?0u")
 
     def test_discover_generated_images_fallback(self):
         with TemporaryDirectory() as tmp:
@@ -121,8 +113,6 @@ class ServiceTests(unittest.TestCase):
                 codex_model="gpt-5.4-mini",
                 codex_home=tmp_path / "codex-home",
                 codex_user_home=tmp_path,
-                terminal_bin="python3",
-                tmux_bin="tmux",
                 host="127.0.0.1",
                 port=0,
                 batch_prefix="$imagegen",
@@ -158,8 +148,6 @@ class ServiceTests(unittest.TestCase):
                 codex_model="gpt-5.4-mini",
                 codex_home=tmp_path / "codex-home",
                 codex_user_home=tmp_path,
-                terminal_bin="python3",
-                tmux_bin="tmux",
                 host="127.0.0.1",
                 port=0,
                 batch_prefix="$imagegen",
@@ -204,14 +192,14 @@ class ServiceTests(unittest.TestCase):
                 self.started = []
 
             def names_for(self, batch_id, index):
-                return TerminalTarget(session_name=f"fake-{batch_id}-{index}", window_name=f"img-{index + 1}")
+                return ProcessTarget(session_name=f"fake-{batch_id}-{index}", window_name=f"img-{index + 1}")
 
             def start(self, target, cwd, command, log_path):
                 self.started.append((target, cwd, command, log_path))
                 return FakeProc()
 
             def capture(self, log_path):
-                return TerminalSnapshot(output="")
+                return ProcessSnapshot(output="")
 
         with TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -222,8 +210,6 @@ class ServiceTests(unittest.TestCase):
                 codex_model="gpt-5.4-mini",
                 codex_home=tmp_path / ".codex",
                 codex_user_home=tmp_path,
-                terminal_bin="python3",
-                tmux_bin="tmux",
                 host="127.0.0.1",
                 port=0,
                 batch_prefix="$imagegen",
@@ -240,6 +226,7 @@ class ServiceTests(unittest.TestCase):
             settings.codex_home.mkdir(parents=True, exist_ok=True)
             (settings.codex_home / "auth.json").write_text("{}", encoding="utf-8")
             manager = JobManager(settings, StateStore(settings.data_dir / "state.json"))
+            manager.auth.status = lambda: {"available": True, "authenticated": True}
             fake_terminal = FakeTerminal()
             manager.terminal = fake_terminal
             manager._watch_job = lambda job_id, proc: None
@@ -262,8 +249,6 @@ class ServiceTests(unittest.TestCase):
                 codex_model="gpt-5.4-mini",
                 codex_home=tmp_path / ".codex",
                 codex_user_home=tmp_path,
-                terminal_bin="python3",
-                tmux_bin="tmux",
                 host="127.0.0.1",
                 port=0,
                 batch_prefix="$imagegen",
@@ -290,13 +275,14 @@ class ServiceTests(unittest.TestCase):
                 store,
             )
             manager = JobManager(settings, store)
+            manager.auth.status = lambda: {"available": True, "authenticated": True}
             manager.terminal = type(
                 "FakeTerminal",
                 (),
                 {
-                    "names_for": lambda self, batch_id, index: TerminalTarget(f"fake-{batch_id}-{index}", f"img-{index + 1}"),
+                    "names_for": lambda self, batch_id, index: ProcessTarget(f"fake-{batch_id}-{index}", f"img-{index + 1}"),
                     "start": lambda self, target, cwd, command, log_path: type("FakeProc", (), {"poll": lambda self: 0, "returncode": 0})(),
-                    "capture": lambda self, log_path: TerminalSnapshot(output=""),
+                    "capture": lambda self, log_path: ProcessSnapshot(output=""),
                 },
             )()
             manager._watch_job = lambda job_id, proc: None

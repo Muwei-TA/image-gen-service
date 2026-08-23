@@ -6,6 +6,7 @@
 !.env.example
 
 __pycache__/
+.venv/
 *.py[cod]
 *.pyo
 .pytest_cache/

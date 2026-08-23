@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import shlex
+import subprocess
 
 from app.config import Settings
 from app.models import JobRecord
@@ -27,7 +29,7 @@ def build_prompt(batch_prefix: str, batch_id: str, index: int, prompt: str, refe
 
 
 def command_parts(job: JobRecord, settings: Settings) -> list[str]:
-    codex_args = [
+    command = [
         str(settings.codex_bin),
         "exec",
         "--model",
@@ -38,23 +40,16 @@ def command_parts(job: JobRecord, settings: Settings) -> list[str]:
         "-C",
         job.workdir,
     ]
-    codex_args.append(build_prompt(settings.batch_prefix, job.batch_id, job.index, job.prompt, getattr(job, "reference_images", [])))
+    command.append(build_prompt(settings.batch_prefix, job.batch_id, job.index, job.prompt, getattr(job, "reference_images", [])))
     for image_path in getattr(job, "reference_images", []):
-        codex_args.extend(["--image", image_path])
-    return [
-        " ".join(
-            [
-                f"HOME={shlex.quote(str(settings.codex_user_home))}",
-                f"CODEX_HOME={shlex.quote(str(settings.codex_home))}",
-                "TERM=xterm-256color",
-                shlex.join(codex_args),
-            ]
-        ),
-    ]
+        command.extend(["--image", image_path])
+    return command
 
 
 def command_string(job: JobRecord, settings: Settings) -> str:
-    return command_parts(job, settings)[0]
+    command = command_parts(job, settings)
+    rendered = subprocess.list2cmdline(command) if os.name == "nt" else shlex.join(command)
+    return f"HOME={settings.codex_user_home} CODEX_HOME={settings.codex_home} TERM=xterm-256color {rendered}"
 
 
 def prepare_job(job: JobRecord, settings: Settings) -> None:

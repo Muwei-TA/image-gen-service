@@ -1,332 +1,47 @@
-# README For Agent
+# Agent Guide
 
-This document is for AI coding agents or automation agents that need to deploy Image Gen Service with Docker for a user.
+Image Gen Service is a Vue 3 + FastAPI application. Native Windows, macOS, and Linux execution is the default development path; Docker is optional.
 
-The goal is to deploy the published Docker image, preserve user data in mounted folders, complete Codex login, verify service health, and avoid leaking credentials, local development files, documentation-only files, runtime state, or generated content.
+## Safety boundaries
 
-## Agent Goal
+- Never print, copy, serve, or commit `auth.json`, `.codex`, API keys, login output containing credentials, uploads, logs, or generated images.
+- The browser authentication API may expose only login state, the official verification URL, and a short-lived device code.
+- Keep runtime data outside public images and source commits.
+- Do not expose the service directly to the public internet without trusted access control.
 
-Deploy a working Image Gen Service instance:
+## Native deployment
 
-- Docker image: `muwei517/image-gen-service:latest`
-- Web port: `8088` by default
-- Runtime data persisted under a user-chosen directory
-- Codex login stored in a mounted `codex-home` directory
-- Generated images stored in a mounted `images` directory at `/data/codex-home/generated_images`
-- Health endpoint verified
-- User given the final URL and Codex login instructions
-- Published image contents kept separate from user runtime data and local-only development work
+Prerequisites are Python 3.12+, uv, Node.js 20+, npm, and Codex CLI.
 
-## Safety Rules
+Windows:
 
-Follow these rules before running commands:
+```powershell
+scripts\start-windows.ps1
+```
 
-- Do not use `docker commit` to publish or preserve this app.
-- Do not copy a user's existing `/root/.codex`, `.codex`, generated images, uploads, logs, `.env` files, `runtime/`, or `data/` into a public image.
-- Do not print DockerHub tokens, GitHub tokens, sudo passwords, or Codex auth files.
-- Do not publish local `mcp/` development work or documentation-only files into the release image.
-- Prefer mounted runtime folders over data stored inside the container.
-- Do not expose this service directly to the public internet. Use a trusted reverse proxy, VPN, or external access control for remote use.
-
-## MCP Server
-
-This repo includes a Streamable HTTP MCP server in `mcp/`. The root `docker-compose.yml` starts both the backend and the MCP adapter. The MCP container depends on the backend container being healthy before starting.
-
-MCP endpoints:
-
-- `POST http://localhost:18089/mcp` - MCP Streamable HTTP
-- `GET http://localhost:18089/health` - MCP health check
-- `GET http://localhost:18089/media/{token}` - short-lived generated image download
-
-Key MCP tool: `imagegen` - synchronously generates images and returns MCP
-ImageContent plus optional channel-safe media URLs. Set
-`IMAGE_GEN_MCP_MEDIA_BASE_URL` to an address reachable from the Agent runtime;
-use `get_batch_images` for completed asynchronous batches.
-
-See `mcp/README.md` for standalone deployment and full tool list.
-
-## Inputs To Collect
-
-Ask or infer these values:
-
-| Input | Default | Notes |
-| --- | --- | --- |
-| Deploy directory | `./image-gen-service` | Host folder that will contain runtime data. |
-| Host port | `8088` | Change if occupied. |
-| Max concurrency | `50` | The published image defaults to 50, matching the UI maximum. Use `1-2` on low-resource machines or quota-limited accounts. |
-| Docker Compose available | auto-detect | Prefer compose when available. |
-
-## Preflight Checks
-
-Run:
+macOS / Linux:
 
 ```bash
-docker --version
-docker compose version
+./scripts/start-unix.sh
 ```
 
-Check port availability:
+The scripts install locked dependencies, build the Vue frontend, prepare runtime directories, and start FastAPI on port 8088. Windows development mode is available through `scripts\start-windows.ps1 -Dev`.
 
-```bash
-ss -tulpn | grep ':8088' || true
-```
-
-If port `8088` is occupied, choose another host port and keep the container port `8088`.
-
-Pull image:
-
-```bash
-docker pull muwei517/image-gen-service:latest
-```
-
-## Recommended Docker Compose Deployment
-
-Create runtime folders:
-
-```bash
-mkdir -p image-gen-service/runtime/data \
-         image-gen-service/runtime/workspace \
-         image-gen-service/runtime/codex-home \
-         image-gen-service/runtime/images
-```
-
-Create `image-gen-service/docker-compose.yml`:
-
-```yaml
-services:
-  image-gen-service:
-    image: muwei517/image-gen-service:latest
-    container_name: image-gen-service
-    ports:
-      - "${IMAGE_GEN_HOST_PORT:-8088}:8088"
-    environment:
-      IMAGE_GEN_MAX_CONCURRENCY: "${IMAGE_GEN_MAX_CONCURRENCY:-50}"
-      IMAGE_GEN_CORS_ORIGIN: "${IMAGE_GEN_CORS_ORIGIN:-*}"
-    volumes:
-      - ./runtime/data:/data/image-gen-service
-      - ./runtime/workspace:/workspace
-      - ./runtime/codex-home:/data/codex-home
-      - ./runtime/images:/data/codex-home/generated_images
-    restart: unless-stopped
-```
-
-Create `image-gen-service/.env`:
-
-```env
-IMAGE_GEN_HOST_PORT=8088
-IMAGE_GEN_MAX_CONCURRENCY=50
-IMAGE_GEN_CORS_ORIGIN=*
-```
-
-Start:
-
-```bash
-cd image-gen-service
-docker compose up -d
-```
-
-## Docker Run Deployment
-
-Use this when Docker Compose is unavailable:
-
-```bash
-mkdir -p image-gen-service/runtime/data \
-         image-gen-service/runtime/workspace \
-         image-gen-service/runtime/codex-home \
-         image-gen-service/runtime/images
-
-docker run -d \
-  --name image-gen-service \
-  -p 8088:8088 \
-  -e IMAGE_GEN_MAX_CONCURRENCY="50" \
-  -v "$PWD/image-gen-service/runtime/data:/data/image-gen-service" \
-  -v "$PWD/image-gen-service/runtime/workspace:/workspace" \
-  -v "$PWD/image-gen-service/runtime/codex-home:/data/codex-home" \
-  -v "$PWD/image-gen-service/runtime/images:/data/codex-home/generated_images" \
-  muwei517/image-gen-service:latest
-```
-
-## Codex Login
-
-After the container is running, the user must log in to Codex inside the container:
-
-```bash
-docker exec -it --user imagegen image-gen-service codex
-```
-
-If the environment does not support interactive commands, stop and ask the user to run this command manually.
-
-Do not attempt to copy Codex auth from another machine unless the user explicitly requests it and understands the risk.
+Do not instruct the user to copy Codex credentials. Ask them to open the UI, click the Codex login control, and complete the device authorization themselves.
 
 ## Verification
 
-Check container status:
-
 ```bash
-docker ps --filter name=image-gen-service
-```
-
-Check health:
-
-```bash
+uv sync --extra dev
+uv run pytest -q
+cd frontend && npm ci && npm run lint && npm run build && cd ..
 curl -fsS http://127.0.0.1:8088/health
 ```
 
-Expected healthy shape:
+Confirm that health and authentication responses contain only booleans and human-readable state. They must not contain credential file paths, access tokens, or refresh tokens.
 
-```json
-{
-  "ok": true,
-  "codex": {
-    "available": true,
-    "authenticated": true,
-    "auth_path": "/data/codex-home/auth.json",
-    "max_concurrency": 50
-  }
-}
-```
+The repository also contains a Streamable HTTP MCP adapter in `mcp/`. After backend changes, run its tests and verify `initialize` plus `tools/list` against a local backend.
 
-Before Codex login, `authenticated` can be `false`. That means Docker deployment is working but Codex login is still needed.
+## Docker
 
-Check API access:
-
-```bash
-curl -i http://127.0.0.1:8088/batches
-```
-
-The request should return `200`.
-
-## Final Response To User
-
-Provide:
-
-- URL: `http://<host>:<port>`
-- Codex login command
-- Runtime directory path
-- Basic management commands:
-
-```bash
-docker logs -f image-gen-service
-docker restart image-gen-service
-docker stop image-gen-service
-```
-
-## Upgrade Procedure
-
-For Compose:
-
-```bash
-cd image-gen-service
-docker compose pull
-docker compose up -d
-```
-
-For Docker run:
-
-```bash
-docker pull muwei517/image-gen-service:latest
-docker stop image-gen-service
-docker rm image-gen-service
-```
-
-Then rerun the original `docker run` command with the same volume mounts.
-
-Never delete the runtime folders unless the user explicitly asks to remove all data.
-
-## Backup
-
-Back up:
-
-```text
-image-gen-service/runtime/data
-image-gen-service/runtime/workspace
-image-gen-service/runtime/codex-home
-image-gen-service/runtime/images
-```
-
-The most sensitive folder is:
-
-```text
-image-gen-service/runtime/codex-home
-```
-
-It contains Codex authentication after login.
-
-## Troubleshooting
-
-### Port already in use
-
-Use another host port:
-
-```yaml
-ports:
-  - "18088:8088"
-```
-
-Then open `http://localhost:18088`.
-
-### Codex unavailable
-
-Check:
-
-```bash
-docker exec image-gen-service codex --version
-```
-
-If the command is missing, the wrong image may be running.
-
-### Codex not authenticated
-
-Run:
-
-```bash
-docker exec -it --user imagegen image-gen-service codex
-```
-
-### Permission errors on mounted folders
-
-The container entrypoint tries to `chown` mounted folders. Some NAS or network filesystems block ownership changes. Use Docker named volumes or choose a local filesystem path with write access.
-
-### Jobs fail or timeout
-
-Check logs:
-
-```bash
-docker logs --tail 200 image-gen-service
-```
-
-Lower concurrency:
-
-```env
-IMAGE_GEN_MAX_CONCURRENCY=1
-```
-
-Restart:
-
-```bash
-docker restart image-gen-service
-```
-
-### Images do not render in the UI
-
-Ensure generated image paths are under allowed roots:
-
-```text
-/data/image-gen-service
-/workspace
-/data/codex-home/generated_images
-```
-
-If custom roots are needed, set `IMAGE_GEN_FILE_ROOTS` with colon-separated paths.
-
-## Publishing Or Rebuilding
-
-Only use the release build process:
-
-```bash
-export CODEX_BIN=/path/to/codex
-export CODEX_RUNTIME=/path/to/codex/runtime
-./scripts/build_release_image.sh image-gen-service:release
-```
-
-Do not publish images made from a running user container. The release build context must exclude docs, local `.env` files, runtime folders, Codex auth material, uploaded/generated images, and local `mcp/` development work.
+The standard `Dockerfile` builds the Vue frontend and installs the FastAPI application. `Dockerfile.release` is used by the release workflow that bundles a Codex binary. Persist data, workspace, Codex home, and generated images with mounted directories in production.

@@ -43,22 +43,23 @@ ENV PYTHONUNBUFFERED=1 \
     APP_GROUP=${APP_USER}
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl gosu procps python3 && \
+    apt-get install -y --no-install-recommends ca-certificates curl gosu procps python3 python3-pip && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd --gid ${APP_GID} ${APP_USER} && \
     useradd --uid ${APP_UID} --gid ${APP_GID} --create-home --shell /usr/sbin/nologin ${APP_USER}
 
 WORKDIR ${APP_HOME}
 
+COPY --chown=${APP_USER}:${APP_USER} pyproject.toml ./
 COPY --chown=${APP_USER}:${APP_USER} app ./app
 COPY --chown=${APP_USER}:${APP_USER} tests ./tests
 COPY --chown=${APP_USER}:${APP_USER} scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY --chown=${APP_USER}:${APP_USER} pyproject.toml ./
 COPY --chown=${APP_USER}:${APP_USER} --from=frontend-builder /build/frontend/dist ./frontend/dist
 COPY release-context/codex-bin/codex ${CODEX_BIN_PATH}
 COPY release-context/codex-runtime ${CODEX_RUNTIME_DIR}
 
 RUN chmod 755 ${CODEX_BIN_PATH} && \
+    python3 -m pip install --no-cache-dir . && \
     chmod -R a+rX ${CODEX_RUNTIME_DIR} && \
     mkdir -p ${APP_DATA_DIR}/jobs \
              ${APP_DATA_DIR}/uploads \
@@ -78,4 +79,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -fsS http://127.0.0.1:8088/health >/dev/null || exit 1
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["python3", "-m", "app.main"]
+CMD ["image-gen-service"]
